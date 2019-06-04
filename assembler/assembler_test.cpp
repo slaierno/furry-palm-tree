@@ -218,6 +218,42 @@ TEST_F(TestInstruction, TRAP) {
     );
 }
 
+TEST_F(TestInstruction, JSRR) {
+    /* TEST INSTRUCTION */
+    testGoodInstruction(
+        "JSRR R2\n",
+        {{TokenType::Instruction, OP::JSRR},
+         {TokenType::Register   , REG::R2}},
+        OP_JSR << 12 | R_R2 << 6
+    );
+
+    /* TEST BAD INSTRUCTION */
+
+    testBadInstruction<asm_error::invalid_format>(
+        "JSRR #x23\n",
+        {{TokenType::Instruction, OP::JSRR},
+         {TokenType::HexNumber  , 0x0023}}
+    );
+}
+
+TEST_F(TestInstruction, JMP_RET) {
+    /* TEST INSTRUCTION */
+    testGoodInstruction(
+        "JMP R2\n",
+        {{TokenType::Instruction, OP::JMP},
+         {TokenType::Register   , REG::R2}},
+        OP_JMP << 12 | R_R2 << 6
+    );
+
+    /* TEST BAD INSTRUCTION */
+
+    testBadInstruction<asm_error::invalid_format>(
+        "JMP #x23\n",
+        {{TokenType::Instruction, OP::JMP},
+         {TokenType::HexNumber  , 0x0023}}
+    );
+}
+
 class TestAssembly : public TestCommon {};
 
 TEST_F(TestAssembly, Labels) {

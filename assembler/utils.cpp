@@ -120,7 +120,7 @@ void validationStep(TokenList tokens) {
             off_bits = 16, 
             set_off(T[1])
         JSRR, JMP, 
-            R1 = T[1], 
+            R2 = T[1], 
             set_regs()
         LD, ST, LDI, STI, LEA,
             R1 = T[1], 
@@ -165,11 +165,12 @@ void validationStep(TokenList tokens) {
         off_bist = 6  -> LDR, STR
         off_bits = 5  -> ADD, AND
         off_bits = 4  -> LSHF, RSHFL, RSHFA
-        R1 = T[1]     -> JSRR, JMP, LD, ST, LDI, STI, LEA, NOT, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
+        R1 = T[1]     -> LD, ST, LDI, STI, LEA, NOT, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
         R1 = CF       -> BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp
         R1 = 4        -> JSR
         R2 = 7        -> RET
         R2 = T[2]     -> NOT, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
+        R2 = T[1]     -> JSRR, JMP
         set_regs      -> RET, JSR, BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, JSRR, JMP, LD, ST, LDI, STI, LEA, NOT, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
         set_off(T[1]) -> JSR, BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, TRAP
         set_off(T[2]) -> LD, ST, LDI, STI, LEA
@@ -200,11 +201,12 @@ template <const unsigned op> uint16_t buildInstruction(const TokenList& tokens) 
     if(0x2300000 & opbit && (tokens.back().isNumber())) inst |= 1 << 5; 
     if(0x4000000 & opbit) inst |= 0b11 << 4;
     if(0x0080000 & opbit) inst |= 0x3F;
-    if(0x7FFF000 & opbit) r1 = tokens[1].getNumValue(); 
+    if(0x7FFC000 & opbit) r1 = tokens[1].getNumValue(); 
     if(0x00007F8 & opbit) r1 = tokens[0].getCondFlags(); 
     if(0x0000004 & opbit) r1 = 4;
     if(0x0000001 & opbit) r1 = 7;
     if(0x7F80000 & opbit) r2 = tokens[2].getNumValue(); 
+    if(0x0003000 & opbit) r2 = tokens[1].getNumValue(); 
     if(0x7FFF7FD & opbit) inst |= r1 << 9 | r2 << 6;
     if(0x0000FFC & opbit) inst |= tokens[1].getNumValue(off_bits);
     if(0x007C000 & opbit) inst |= tokens[2].getNumValue(off_bits);
