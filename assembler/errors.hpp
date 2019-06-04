@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <exception>
@@ -26,7 +27,7 @@ namespace asm_error {
         static const std::string make_error_str(TokenList const& tokens) {
             std::string argtype_str = "";
             for(auto const& token : tokens) {
-                argtype_str += tokenToShortString(token) + " ";
+                argtype_str += token.getErrorString() + " ";
             }
             argtype_str.pop_back(); //remove trailing space
             return "ERROR: Invalid instruction format " + argtype_str;
@@ -59,7 +60,7 @@ namespace asm_error {
 
     class invalid_token : public std::logic_error {
     public:
-        invalid_token() : std::logic_error("ERROR: unknown token type") {};
+        invalid_token() : std::logic_error("ERROR: invalid token type") {};
     };
 
     class out_of_range_integer : public std::logic_error {

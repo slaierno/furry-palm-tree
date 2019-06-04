@@ -48,6 +48,14 @@ const std::map<std::string, enum OP> op_tokens {
 };
 #undef o
 
+/* This is slow, used only for debug strings */
+static std::string op_token_to_string(enum OP op) {
+    for(auto const& el : op_tokens) {
+        if(el.second == op) return el.first;
+    }
+    return "INVALID";
+};
+
 /* Map which associates every assembly instruction with its binary opcode */
 #define op(N) {OP::N, OP_ ## N}
 #define alias(M,N) {OP::M, OP_ ## N}
@@ -90,6 +98,14 @@ const std::map<std::string, enum REG> reg_tokens {
     o(R0), o(R1), o(R2), o(R3), o(R4), o(R5), o(R6), o(R7),
 };
 #undef o
+
+/* This is slow, used only for debug strings */
+static std::string reg_token_to_string(enum REG reg) {
+    for(auto const& el : reg_tokens) {
+        if(el.second == reg) return el.first;
+    }
+    return "INVALID";
+};
 
 #define reg(N) {REG::N, R_ ## N}
 const std::map<enum REG, uint16_t> reg_map {

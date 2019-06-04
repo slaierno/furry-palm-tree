@@ -70,32 +70,48 @@ TEST_F(TestToken, BR) {
     }
 }
 
-class TestInstruction : public TestCommon {};
+class TestInstruction : public TestCommon {
+public:
+    static void testGoodInstruction(const std::string& inst_str, const TokenList& tokens_check, uint16_t inst) {
+        TokenList tokens = tokenize(inst_str);
+        EXPECT_EQ(tokens_check, tokens);
+        EXPECT_NO_THROW(validationStep(tokens));
+        EXPECT_EQ(inst, inst_table[tokens[0].get<enum OP>()](tokens));
+    }
+    template <typename ErrorType>
+    static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
+        TokenList tokens = tokenize(inst_str);
+        EXPECT_EQ(tokens_check, tokens);
+        EXPECT_THROW(validationStep(tokens), ErrorType) << inst_str;
+    }
+    template <typename ErrorType>
+    static void testBadLabel(const std::string& inst_str, const TokenList& tokens_check) {
+        TokenList tokens = tokenize(inst_str);
+        EXPECT_EQ(tokens_check, tokens);
+        EXPECT_NO_THROW(validationStep(tokens));
+        EXPECT_THROW(inst_table[tokens[0].get<enum OP>()](tokens), ErrorType) << inst_str;
+    }
+private:
+    static void tokenListCheck(const TokenList& token_list) {
+        for(auto const& token : token_list) {
+            switch(token.mType) {
+                
+            }
+        }
+    }
+};
 TEST_F(TestInstruction, RTI) {
     /* TEST INSTRUCTION */
-    std::string inst_str = "RTI\n";
-    TokenList tokens = tokenize(inst_str);
-    EXPECT_EQ(1, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(OP::RTI, tokens[0].get<enum OP>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-
-    EXPECT_EQ(OP_RTI << 12, inst_table[tokens[0].get<enum OP>()](tokens));
+    testGoodInstruction("RTI\n",
+        {{TokenType::Instruction, OP::RTI}},
+        OP_RTI << 12);
 
     /* TEST BAD INSTRUCTION */
-    inst_str = "RTI R0\n";
-    tokens = tokenize(inst_str);
-    EXPECT_EQ(2, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Register,    tokens[1].mType);
-    
-    EXPECT_EQ(OP::RTI,                tokens[0].get<enum OP>());
-    EXPECT_EQ(REG::R0,                tokens[1].get<enum REG>());
-
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_format);
+    testBadInstruction<asm_error::invalid_format>(
+        "RTI R0\n",
+        {{TokenType::Instruction, OP::RTI},
+         {TokenType::Register   , REG::R0}}
+    );
 }
 
 TEST_F(TestInstruction, JSR) {
@@ -103,65 +119,38 @@ TEST_F(TestInstruction, JSR) {
     label_map.insert(std::pair("PLUTO", 0x2FF0));
 
     /* TEST INSTRUCTION */
-    std::string inst_str = "JSR PIPPO\n";
-    TokenList tokens = tokenize(inst_str);
-    EXPECT_EQ(2, tokens.size());
+    testGoodInstruction(
+        "JSR PIPPO\n",
+        {{TokenType::Instruction, OP::JSR},
+         {TokenType::Label      , "PIPPO"}},
+        OP_JSR << 12 | 1 << 11 | (0x3010 - 0x3000) & 0x7FF
+    );
 
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Label,       tokens[1].mType);
-
-    EXPECT_EQ(OP::JSR,                tokens[0].get<enum OP>());
-    EXPECT_EQ("PIPPO",                tokens[1].get<std::string>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-    
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | (0x3010 - 0x3000) & 0x7FF, 
-              inst_table[tokens[0].get<enum OP>()](tokens));
-
-    /* TEST INSTRUCTION */
-    inst_str = "JSR PLUTO\n";
-    tokens = tokenize(inst_str);
-    EXPECT_EQ(2, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Label,       tokens[1].mType);
-
-    EXPECT_EQ(OP::JSR,                tokens[0].get<enum OP>());
-    EXPECT_EQ("PLUTO",                tokens[1].get<std::string>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | (0x2FF0 - 0x3000) & 0x7FF, 
-              inst_table[tokens[0].get<enum OP>()](tokens));
+    testGoodInstruction(
+        "JSR PLUTO\n",
+        {{TokenType::Instruction, OP::JSR},
+         {TokenType::Label      , "PLUTO"}},
+        OP_JSR << 12 | 1 << 11 | (0x2FF0 - 0x3000) & 0x7FF
+    );
 
     /* TEST BAD INSTRUCTION */
-    inst_str = "JSR PAPERINO\n";
-    tokens = tokenize(inst_str);
-    EXPECT_EQ(2, tokens.size());
+    testBadLabel<asm_error::label_not_found>(
+        "JSR PAPERINO\n",
+        {{TokenType::Instruction, OP::JSR},
+         {TokenType::Label      , "PAPERINO"}}
+    );
 
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Label,       tokens[1].mType);
-
-    EXPECT_EQ(OP::JSR,                tokens[0].get<enum OP>());
-    EXPECT_EQ("PAPERINO",             tokens[1].get<std::string>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-    EXPECT_THROW(inst_table[tokens[0].get<enum OP>()](tokens), asm_error::label_not_found);
-
-    /* TEST BAD INSTRUCTION */
-    inst_str = "JSR\n";
-    tokens = tokenize(inst_str);
-    EXPECT_EQ(1, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(OP::JSR,                tokens[0].get<enum OP>());
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_format);
+    testBadInstruction<asm_error::invalid_format>(
+        "JSR\n",
+        {{TokenType::Instruction, OP::JSR}}
+    );
 }
 
 TEST_F(TestInstruction, BR) {
     label_map.insert(std::pair("PIPPO", 0x3010));
 
     /* TEST BR INSTRUCTIONS */
-    std::vector<std::pair<std::string, enum OP>> inst_list {
+    const std::vector<std::pair<std::string, enum OP>> inst_list {
         {"BR PIPPO\n",    OP::BR},
         {"BRn PIPPO\n",   OP::BRn},
         {"BRz PIPPO\n",   OP::BRz},
@@ -176,99 +165,57 @@ TEST_F(TestInstruction, BR) {
         auto inst_op  = inst.second;
         auto opcode   = op_map.find(inst_op)->second;
 
-        TokenList tokens = tokenize(inst_str);
-        EXPECT_EQ(2, tokens.size());
-
-        EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-        EXPECT_EQ(TokenType::Label,       tokens[1].mType);
-
-        EXPECT_EQ(inst_op,                tokens[0].get<enum OP>());
-        EXPECT_EQ("PIPPO",                tokens[1].get<std::string>());
-
-        EXPECT_NO_THROW(validationStep(tokens));
-        
-        EXPECT_EQ(opcode                   << 12 | 
-                  tokens[0].getCondFlags() << 9  | 
-                  (0x3010 - 0x3000)         & 0x7FF, 
-                  inst_table[tokens[0].get<enum OP>()](tokens));
+        testGoodInstruction(
+            inst_str,
+            {{TokenType::Instruction, inst_op},
+             {TokenType::Label      , "PIPPO"}},
+            opcode                          << 12 | 
+            Token::getCondFlags(inst_op)    << 9  | 
+            (0x3010 - 0x3000)                & 0x7FF
+        );
     }
-
     /* TEST BAD INSTRUCTION */
-    TokenList tokens = tokenize("BR PAPERINO\n");
-    EXPECT_EQ(2, tokens.size());
+    testBadLabel<asm_error::label_not_found>(
+        "BR PAPERINO\n",
+        {{TokenType::Instruction, OP::BR},
+         {TokenType::Label      , "PAPERINO"}}
+    );
 
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Label,       tokens[1].mType);
-
-    EXPECT_EQ(OP::BR,                 tokens[0].get<enum OP>());
-    EXPECT_EQ("PAPERINO",             tokens[1].get<std::string>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-    EXPECT_THROW(inst_table[tokens[0].get<enum OP>()](tokens), asm_error::label_not_found);
-
-    /* TEST BAD INSTRUCTION */
-    tokens = tokenize("BR\n");
-    EXPECT_EQ(1, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(OP::BR,                 tokens[0].get<enum OP>());
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_format);
+    testBadInstruction<asm_error::invalid_format>(
+        "BR\n",
+        {{TokenType::Instruction, OP::BR}}
+    );
 }
 
 TEST_F(TestInstruction, TRAP) {
     /* TEST INSTRUCTION */
-    TokenList tokens = tokenize("TRAP #x23\n");
-    EXPECT_EQ(2, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::HexNumber,   tokens[1].mType);
-
-    EXPECT_EQ(OP::TRAP,               tokens[0].get<enum OP>());
-    EXPECT_EQ(0x0023,                 tokens[1].get<int>());
-
-    EXPECT_NO_THROW(validationStep(tokens));
-    
-    EXPECT_EQ(OP_TRAP << 12 | 0x0023, 
-              inst_table[tokens[0].get<enum OP>()](tokens));
+    testGoodInstruction(
+        "TRAP #x23\n",
+        {{TokenType::Instruction, OP::TRAP},
+         {TokenType::HexNumber  , 0x0023}},
+        OP_TRAP << 12 | 0x0023
+    );
 
     /* TEST BAD INSTRUCTION */
-    tokens = tokenize("TRAP #35\n");
-    EXPECT_EQ(2, tokens.size());
+    testBadInstruction<asm_error::invalid_format>(
+        "TRAP #35\n",
+        {{TokenType::Instruction, OP::TRAP},
+         {TokenType::Number     , 35}}
+    );    
+    // EXPECT_EQ(OP_TRAP << 12 | 0x0023, 
+    //           inst_table[tokens[0].get<enum OP>()](tokens));
 
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Number,      tokens[1].mType);
+    testBadInstruction<asm_error::out_of_range_integer_unsigned>(
+        "TRAP #x-23\n",
+        {{TokenType::Instruction, OP::TRAP},
+         {TokenType::HexNumber  , -35}}
+    );    
 
-    EXPECT_EQ(OP::TRAP,               tokens[0].get<enum OP>());
-    EXPECT_EQ(0x0023,                 tokens[1].get<int>());
-
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_format);
-    
-    EXPECT_EQ(OP_TRAP << 12 | 0x0023, 
-              inst_table[tokens[0].get<enum OP>()](tokens));
-
-    /* TEST BAD INSTRUCTION */
-    tokens = tokenize("TRAP #x-23\n");
-    EXPECT_EQ(2, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::HexNumber,   tokens[1].mType);
-
-    EXPECT_EQ(OP::TRAP,               tokens[0].get<enum OP>());
-    EXPECT_EQ(-35,                    tokens[1].get<int>());
-
-    EXPECT_THROW(validationStep(tokens), asm_error::out_of_range_integer_unsigned);
-
-    /* TEST BAD INSTRUCTION */
-    tokens = tokenize("TRAP R0\n");
-    EXPECT_EQ(2, tokens.size());
-
-    EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-    EXPECT_EQ(TokenType::Register,    tokens[1].mType);
-
-    EXPECT_EQ(OP::TRAP,               tokens[0].get<enum OP>());
-    EXPECT_EQ(REG::R0,                tokens[1].get<enum REG>());
-
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_format);
+    testBadInstruction<asm_error::invalid_format>(
+        "TRAP R0\n",
+        {{TokenType::Instruction, OP::TRAP},
+         {TokenType::Register   , REG::R0}}
+    );
 }
 
 class TestAssembly : public TestCommon {};

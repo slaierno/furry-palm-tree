@@ -226,61 +226,6 @@ uint16_t (*inst_table[OP::COUNT])(const TokenList&) = {
 uint16_t inst_address = 0x3000;
 std::map<std::string, uint16_t> label_map;
 
-std::string typeToString(enum TokenType const type) {
-    switch(type) {
-        case TokenType::Instruction:
-            return "Instruction";
-        case TokenType::Label:
-            return "Label";
-        case TokenType::Register:
-            return "Register";
-        case TokenType::Number:
-            return "Number";
-        case TokenType::HexNumber:
-            return "HexNumber";
-        case TokenType::Undefined:
-            return "Undefined";
-        default:
-            throw std::logic_error("Unknown TokenType");
-    }
-}
-
-std::string tokenToString(Token const& token) {
-    switch(token.mType) {
-        case TokenType::Instruction:
-            return token.getTokenString();
-        default:
-            return typeToString(token.mType);
-    }
-}
-
-std::string typeToShortString(enum TokenType const type) {
-    switch(type) {
-        case TokenType::Instruction:
-            return "OP";
-        case TokenType::Label:
-            return "LABEL";
-        case TokenType::Register:
-            return "REG";
-        case TokenType::Number:
-        case TokenType::HexNumber:
-            return "NUM";
-        case TokenType::Undefined:
-            return "UNDEF";
-        default:
-            throw std::logic_error("Unknown TokenType");
-    }
-}
-
-std::string tokenToShortString(Token const& token) {
-    switch(token.mType) {
-        case TokenType::Instruction:
-            return token.getTokenString();
-        default:
-            return typeToShortString(token.mType);
-    }
-}
-
 void validateLine(std::string& line) {
     TokenList token_list = tokenize(line);
     //TODO catch exception?
