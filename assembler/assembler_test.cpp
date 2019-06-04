@@ -76,7 +76,7 @@ public:
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens);
         EXPECT_NO_THROW(validationStep(tokens));
-        EXPECT_EQ(inst, inst_table[tokens[0].get<enum OP>()](tokens));
+        EXPECT_EQ(inst, inst_table[tokens[0].get<enum OP>()](tokens)) << inst_str;
     }
     template <typename ErrorType>
     static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
@@ -90,14 +90,6 @@ public:
         EXPECT_EQ(tokens_check, tokens);
         EXPECT_NO_THROW(validationStep(tokens));
         EXPECT_THROW(inst_table[tokens[0].get<enum OP>()](tokens), ErrorType) << inst_str;
-    }
-private:
-    static void tokenListCheck(const TokenList& token_list) {
-        for(auto const& token : token_list) {
-            switch(token.mType) {
-                
-            }
-        }
     }
 };
 TEST_F(TestInstruction, RTI) {
@@ -228,7 +220,6 @@ TEST_F(TestInstruction, JSRR) {
     );
 
     /* TEST BAD INSTRUCTION */
-
     testBadInstruction<asm_error::invalid_format>(
         "JSRR #x23\n",
         {{TokenType::Instruction, OP::JSRR},
@@ -244,9 +235,13 @@ TEST_F(TestInstruction, JMP_RET) {
          {TokenType::Register   , REG::R2}},
         OP_JMP << 12 | R_R2 << 6
     );
+    testGoodInstruction(
+        "RET\n",
+        {{TokenType::Instruction, OP::RET}},
+        OP_JMP << 12 | R_R7 << 6
+    );
 
     /* TEST BAD INSTRUCTION */
-
     testBadInstruction<asm_error::invalid_format>(
         "JMP #x23\n",
         {{TokenType::Instruction, OP::JMP},

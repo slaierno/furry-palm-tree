@@ -204,7 +204,7 @@ template <const unsigned op> uint16_t buildInstruction(const TokenList& tokens) 
     if(0x7FFC000 & opbit) r1 = tokens[1].getNumValue(); 
     if(0x00007F8 & opbit) r1 = tokens[0].getCondFlags(); 
     if(0x0000004 & opbit) r1 = 4;
-    if(0x0000001 & opbit) r1 = 7;
+    if(0x0000001 & opbit) r2 = 7;
     if(0x7F80000 & opbit) r2 = tokens[2].getNumValue(); 
     if(0x0003000 & opbit) r2 = tokens[1].getNumValue(); 
     if(0x7FFF7FD & opbit) inst |= r1 << 9 | r2 << 6;
