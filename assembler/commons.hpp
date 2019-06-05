@@ -86,7 +86,7 @@ const std::vector<enum TokenType> Reg_Reg_Hex {TokenType::Register, TokenType::R
 const std::vector<enum TokenType> Reg_Reg_Num {TokenType::Register, TokenType::Register, TokenType::Number};
 
 /* Map which associates every instruction with every possible arguments combination */
-const std::multimap<OP::Type, const std::vector<enum TokenType>> validation_map {
+const std::multimap<OP::Type, const std::vector<enum TokenType>> validInstructionMap {
     {OP::RET, NO_ARGS}      , {OP::RTI, NO_ARGS}      , {OP::JSR, Label},
     {OP::BR, Label}         , {OP::BRn, Label}        , {OP::BRz, Label},
     {OP::BRp, Label}        , {OP::BRnz, Label}       , {OP::BRnp, Label},
@@ -133,6 +133,7 @@ static inline uint8_t brToCondFlag(const OP::Type op) {
         return 0b101;
     case OP::BRzp:
         return 0b011;
+    default:
+        return 0;
     }
-    return 0;
 }

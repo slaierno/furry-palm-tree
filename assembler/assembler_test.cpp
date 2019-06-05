@@ -59,7 +59,6 @@ TEST_F(TestToken, BR) {
         auto inst_str = std::get<0>(inst);
         auto inst_op  = std::get<1>(inst);
         auto cflags   = std::get<2>(inst);
-        auto opcode   = opEnumToOpcodeMap[inst_op];
 
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(2, tokens.size());
@@ -120,14 +119,13 @@ TEST_F(TestInstruction, JSR) {
         "JSR PIPPO\n",
         {{TokenType::Instruction, OP::JSR},
          {TokenType::Label      , "PIPPO"}},
-        OP_JSR << 12 | 1 << 11 | (0x3010 - 0x3000) & 0x7FF
+        OP_JSR << 12 | 1 << 11 | ((0x3010 - 0x3000) & 0x7FF)
     );
-
     testGoodInstruction(
         "JSR PLUTO\n",
         {{TokenType::Instruction, OP::JSR},
          {TokenType::Label      , "PLUTO"}},
-        OP_JSR << 12 | 1 << 11 | (0x2FF0 - 0x3000) & 0x7FF
+        OP_JSR << 12 | 1 << 11 | ((0x2FF0 - 0x3000) & 0x7FF)
     );
 
     /* TEST BAD INSTRUCTION */
@@ -166,9 +164,9 @@ TEST_F(TestInstruction, BR) {
             inst_str,
             {{TokenType::Instruction, inst_op},
              {TokenType::Label      , "PIPPO"}},
-            opcode                          << 12 | 
-            brToCondFlag(inst_op)           << 9  | 
-            (0x3010 - 0x3000)                & 0x7FF
+            opcode                 << 12  | 
+            brToCondFlag(inst_op)  << 9   | 
+            ((0x3010 - 0x3000)     & 0x7FF)
         );
     }
     /* TEST BAD INSTRUCTION */
@@ -273,7 +271,7 @@ TEST_F(TestInstruction, LD_ST_LDI_STI_LEA) {
             {{TokenType::Instruction, std::get<1>(inst)},
              {TokenType::Register   , REG::R1},
              {TokenType::Label      , "PIPPO"}},
-            std::get<2>(inst) << 12 | R_R1 << 9 | (0x3010 - 0x3000) & 0x1FF
+            std::get<2>(inst) << 12 | R_R1 << 9 | ((0x3010 - 0x3000) & 0x1FF)
         );
         /* TEST BAD INSTRUCTION */
         testBadInstruction<asm_error::invalid_format>(
@@ -315,9 +313,9 @@ TEST_F(TestAssembly, Labels) {
             });
     }
     EXPECT_EQ(3, code_list.size());
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | (0x3002 - 0x3000) & 0x7FF, code_list[0]);
-    EXPECT_EQ(OP_RTI << 12,                                       code_list[1]);
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | (0x3001 - 0x3002) & 0x7FF, code_list[2]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x3002 - 0x3000) & 0x7FF), code_list[0]);
+    EXPECT_EQ(OP_RTI << 12,                                         code_list[1]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x3001 - 0x3002) & 0x7FF), code_list[2]);
 }
 
 int main(int argc, char* argv[])

@@ -9,8 +9,8 @@
 using TokenValue = std::variant<OP::Type, REG::Type, int, std::string>;
 class Token {
     std::string mToken;
-    TokenValue mValue;
     enum TokenType mType;
+    TokenValue mValue;
 public:
                       Token(std::string token);
                      ~Token() {};
@@ -53,15 +53,8 @@ public:
     /*       GTEST HELPERS           */
     /*********************************/
 
-    friend void PrintTo(const Token& tkn, std::ostream* os) {
-        *os << tkn.DebugString();  // whatever needed to print bar to os
-    }
-
-    std::string DebugString() const {
-        std::stringstream ss;
-        ss << "{ TokenType::" << getTypeString() << ", " << getTokenString() << " }";
-        return ss.str();
-    }
+    friend void PrintTo(const Token& tkn, std::ostream* os) { *os << tkn.DebugString(); }
+    std::string DebugString() const { return "{ TokenType::" + getTypeString() + ", " + getTokenString() + " }"; }
 };
 
 using TokenList = std::vector<Token>;

@@ -12,7 +12,7 @@ TokenList tokenize(std::string line) {
     /* Extract tokens */
     /* Dark magic happens here */
     /* Yes, I had fun. */
-    auto parse = [&token_list, &line] (const auto& self) -> TokenList& {
+    auto parse = [&] (const auto& self) -> TokenList& {
         return line.length() ? (
                 token_list.push_back(line.substr(0, line.find_first_of(" ,\n"))), 
                 line.erase(0, line.find_first_not_of(" ,\n", line.find_first_of(" ,\n"))), 
@@ -26,67 +26,66 @@ TokenList tokenize(std::string line) {
 
 void validationStep(TokenList tokens) {
     switch(tokens[0].getType()) {
-        case TokenType::Instruction: {
-            /* Construct argument vector */
-            std::vector<enum TokenType> args_type;
-            for(auto& token : tokens) {
-                if(token.getType() == TokenType::Instruction) continue; //skip first element
-                args_type.push_back(token.getType());
-            }
-            /* Find if argument sequence is valid */
-            auto range = validation_map.equal_range(tokens[0].get<OP::Type>());
-            for (auto i = range.first; i != range.second; ++i) {
-                if(i->second == args_type) {
-                    /* Found a match! */
-                    /* Now check if int values are valid */
-                    switch(tokens[0].get<OP::Type>()) {
-                        case OP::ADD:
-                        case OP::AND:
-                            if(tokens[3].isNumber()) checkBitRange(tokens[2], 5);
-                            break;
-                        case OP::LD:
-                        case OP::LDI:
-                        case OP::LEA:
-                        case OP::ST:
-                        case OP::STI:
-                            checkBitRange(tokens[2], 9);
-                            break;
-                        case OP::LDR:
-                        case OP::STR:
-                            checkBitRange(tokens[3], 6);
-                            break;
-                        case OP::LSHF:
-                        case OP::RSHFL:
-                        case OP::RSHFA:
-                            checkBitRangeUnsigned(tokens[2], 4);
-                            break;
-                        case OP::TRAP:
-                            checkBitRangeUnsigned(tokens[1], 8);
-                            break;
-                    }
-
+    case TokenType::Instruction: {
+        /* Construct argument vector */
+        std::vector<enum TokenType> args_type;
+        for(auto& token : tokens) {
+            if(token.getType() == TokenType::Instruction) continue; //skip first element
+            args_type.push_back(token.getType());
+        }
+        /* Find if argument sequence is valid */
+        auto range = validInstructionMap.equal_range(tokens[0].get<OP::Type>());
+        for (auto i = range.first; i != range.second; ++i) {
+            if(i->second == args_type) {
+                /* Found a match!                    */
+                /* Now check if int values are valid */
+                switch(tokens[0].get<OP::Type>()) {
+                case OP::ADD:
+                case OP::AND:
+                    if(tokens[3].isNumber()) checkBitRange(tokens[2], 5);
+                    return;
+                case OP::LD:
+                case OP::LDI:
+                case OP::LEA:
+                case OP::ST:
+                case OP::STI:
+                    checkBitRange(tokens[2], 9);
+                    return;
+                case OP::LDR:
+                case OP::STR:
+                    checkBitRange(tokens[3], 6);
+                    return;
+                case OP::LSHF:
+                case OP::RSHFL:
+                case OP::RSHFA:
+                    checkBitRangeUnsigned(tokens[2], 4);
+                    return;
+                case OP::TRAP:
+                    checkBitRangeUnsigned(tokens[1], 8);
+                    return;
+                default:
                     return;
                 }
             }
-            throw asm_error::invalid_format(tokens);
-        } break;
-        case TokenType::Label: {
-            if (tokens.size() > 1)
-                throw asm_error::invalid_label_decl();
-            if (label_map.find(tokens[0].get<std::string>()) != label_map.end())
-                throw asm_error::duplicate_label(tokens[0]);
-            label_map.insert(std::pair(tokens[0].get<std::string>(), inst_address));
+        }
+        throw asm_error::invalid_format(tokens);
+    } break;
+    case TokenType::Label:
+        if (tokens.size() > 1)
+            throw asm_error::invalid_label_decl();
+        if (label_map.find(tokens[0].get<std::string>()) != label_map.end())
+            throw asm_error::duplicate_label(tokens[0]);
+        label_map.insert(std::pair(tokens[0].get<std::string>(), inst_address));
+        break;
+    default:
+        /* Only one token which may be a reserved one used as a label */
+        if (tokens.size() == 1)
+            throw asm_error::invalid_label_name(tokens[0]);
+        else {
+            // TODO miscellaneous
+            throw asm_error::invalid_token();
         }
         break;
-        default: {
-            /* Only one token which may be a reserved one used as a label */
-            if (tokens.size() == 1) {
-                throw asm_error::invalid_label_name(tokens[0]);
-            } else {
-                // TODO miscellaneous
-                throw asm_error::invalid_token();
-            }
-        } break;
     }
 }
 
@@ -237,24 +236,23 @@ void validateLine(std::string& line) {
 uint16_t assembleLine(std::string& line) {
     TokenList token_list = tokenize(line);
     if (token_list.empty()) return 0;
-    switch(token_list[0].getType()) {
-        case TokenType::Instruction: {
-            auto opcode = token_list[0].get<OP::Type>();
-            uint16_t inst = inst_table[opcode](token_list);
-            inst_address++;
-            return inst;
-        }
-        case TokenType::Label:
-            return 0;
-        default:
-            throw std::logic_error("ERROR unknown error");
+    switch (token_list[0].getType()) {
+    case TokenType::Instruction: {
+        auto opcode = token_list[0].get<OP::Type>();
+        uint16_t inst = inst_table[opcode](token_list);
+        inst_address++;
+        return inst;
+    }
+    case TokenType::Label:
+        return 0;
+    default:
+        throw std::logic_error("ERROR unknown error");
     }
 }
 
 void checkBitRange(Token const& token, const int nBit) {
-    if (nBit < 0 || nBit > 11) {
+    if (nBit < 0 || nBit > 11)
         throw std::logic_error("unexpected bit range, this is VERY bad");
-    }
     int lower = -(1 << (nBit-1));
     int upper =  (1 << (nBit-1)) - 1;
     if (token.getNumValue() < lower || token.getNumValue() > upper)
@@ -262,9 +260,8 @@ void checkBitRange(Token const& token, const int nBit) {
 }
 
 void checkBitRangeUnsigned(Token const& token, const int nBit) {
-    if (nBit < 0 || nBit > 8) {
+    if (nBit < 0 || nBit > 8)
         throw std::logic_error("unexpected bit range, this is VERY bad");
-    }
     int lower = 0;
     int upper = (1 << nBit) - 1;
     if (token.getNumValue() < lower || token.getNumValue() > upper)

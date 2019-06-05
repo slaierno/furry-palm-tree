@@ -50,5 +50,5 @@ extern uint16_t memory[UINT16_MAX];
  */
 
 inline void mem_write(uint16_t address, uint16_t val) { memory[address] = val; }
-inline void mem_write88(uint16_t address, uint16_t val_h, uint16_t val_l) { memory[address] = val_h << 8 | val_l & 0xFF; }
+inline void mem_write88(uint16_t address, uint16_t val_h, uint16_t val_l) { memory[address] = val_h << 8 | (val_l & 0xFF); }
 uint16_t mem_read(uint16_t address);
