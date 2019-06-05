@@ -13,7 +13,7 @@ namespace asm_error {
 
     class label_not_found : public std::logic_error {
     public:
-        label_not_found(std::string const& label) : std::logic_error(make_error_str(label)) {}
+        label_not_found(std::string const& label) : std::logic_error(make_error_str(label)) {};
     private:
         static const std::string make_error_str(std::string const& label) {
             return "ERROR: label " + label + " not found!\n";
@@ -61,6 +61,11 @@ namespace asm_error {
     class invalid_token : public std::logic_error {
     public:
         invalid_token() : std::logic_error("ERROR: invalid token type") {};
+    };
+
+    class invalid_instruction : public std::logic_error {
+    public:
+        invalid_instruction(const std::string& str) : std::logic_error(str) {};
     };
 
     class out_of_range_integer : public std::logic_error {

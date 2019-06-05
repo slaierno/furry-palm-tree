@@ -1,66 +1,64 @@
+#include <algorithm>
 #include "utils.hpp"
 #include "errors.hpp"
 
 TokenList tokenize(std::string line) {
-    static const std::string delims = " ,\n";
-    static const std::string comm = ";";
+    TokenList token_list;
 
     /* Remove comments */
-    size_t comment_pos = line.find_first_of(comm);
-    if(comment_pos != std::string::npos) {
-        line = line.substr(0, comment_pos) + "\n"; //Reappend newline
-    }
+    line = line.substr(std::min(0ULL, line.find_first_not_of(" ,\n")), 
+                                      line.find_first_of(";"));
 
     /* Extract tokens */
-    TokenList token_list;
-    size_t del_pos = 0, text_pos = 0;
-    while(true) {
-        /* text_pos can be npos in case of blank or comment-only lines */
-        size_t text_pos = line.find_first_not_of(delims, del_pos);
-        if(text_pos == std::string::npos) {
-            return token_list;
-        }
-        /* del_pos cannot be npos since there is _at least_ the newline at the end */
-        del_pos = line.find_first_of(delims, text_pos);
-        token_list.push_back(line.substr(text_pos, del_pos - text_pos));
-    }
+    /* Dark magic happens here */
+    /* Yes, I had fun. */
+    auto parse = [&token_list, &line] (const auto& self) -> TokenList& {
+        return line.length() ? (
+                token_list.push_back(line.substr(0, line.find_first_of(" ,\n"))), 
+                line.erase(0, line.find_first_not_of(" ,\n", line.find_first_of(" ,\n"))), 
+                line.length() ? 
+                    self(self) : 
+                    token_list
+        ) : token_list;
+    };
+    return parse(parse);
 }
 
 void validationStep(TokenList tokens) {
-    switch(tokens[0].mType) {
+    switch(tokens[0].getType()) {
         case TokenType::Instruction: {
             /* Construct argument vector */
             std::vector<enum TokenType> args_type;
             for(auto& token : tokens) {
-                if(token.mType == TokenType::Instruction) continue; //skip first element
-                args_type.push_back(token.mType);
+                if(token.getType() == TokenType::Instruction) continue; //skip first element
+                args_type.push_back(token.getType());
             }
             /* Find if argument sequence is valid */
-            auto range = validation_map.equal_range(tokens[0].get<enum OP>());
+            auto range = validation_map.equal_range(tokens[0].get<OP::Type>());
             for (auto i = range.first; i != range.second; ++i) {
                 if(i->second == args_type) {
                     /* Found a match! */
                     /* Now check if int values are valid */
-                    switch(tokens[0].get<enum OP>()) {
+                    switch(tokens[0].get<OP::Type>()) {
                         case OP::ADD:
                         case OP::AND:
-                            if(tokens[2].isNumber()) checkBitRange(tokens[2], 5);
+                            if(tokens[3].isNumber()) checkBitRange(tokens[2], 5);
                             break;
                         case OP::LD:
                         case OP::LDI:
                         case OP::LEA:
                         case OP::ST:
                         case OP::STI:
-                            checkBitRange(tokens[1], 9);
+                            checkBitRange(tokens[2], 9);
                             break;
                         case OP::LDR:
                         case OP::STR:
-                            checkBitRange(tokens[1], 6);
+                            checkBitRange(tokens[3], 6);
                             break;
                         case OP::LSHF:
                         case OP::RSHFL:
                         case OP::RSHFA:
-                            checkBitRangeUnsigned(tokens[1], 4);
+                            checkBitRangeUnsigned(tokens[2], 4);
                             break;
                         case OP::TRAP:
                             checkBitRangeUnsigned(tokens[1], 8);
@@ -201,12 +199,12 @@ template <const unsigned op> uint16_t buildInstruction(const TokenList& tokens) 
     if(0x2300000 & opbit && (tokens.back().isNumber())) inst |= 1 << 5; 
     if(0x4000000 & opbit) inst |= 0b11 << 4;
     if(0x0080000 & opbit) inst |= 0x3F;
-    if(0x7FFC000 & opbit) r1 = tokens[1].getNumValue(); 
+    if(0x7FFC000 & opbit) r1 = tokens[1].getNumValue(3); 
     if(0x00007F8 & opbit) r1 = tokens[0].getCondFlags(); 
     if(0x0000004 & opbit) r1 = 4;
     if(0x0000001 & opbit) r2 = 7;
-    if(0x7F80000 & opbit) r2 = tokens[2].getNumValue(); 
-    if(0x0003000 & opbit) r2 = tokens[1].getNumValue(); 
+    if(0x7F80000 & opbit) r2 = tokens[2].getNumValue(3); 
+    if(0x0003000 & opbit) r2 = tokens[1].getNumValue(3); 
     if(0x7FFF7FD & opbit) inst |= r1 << 9 | r2 << 6;
     if(0x0000FFC & opbit) inst |= tokens[1].getNumValue(off_bits);
     if(0x007C000 & opbit) inst |= tokens[2].getNumValue(off_bits);
@@ -230,17 +228,18 @@ std::map<std::string, uint16_t> label_map;
 
 void validateLine(std::string& line) {
     TokenList token_list = tokenize(line);
-    //TODO catch exception?
+    if(token_list.empty()) return;
     validationStep(token_list);
-    if(token_list[0].mType == TokenType::Instruction) 
+    if(token_list[0].getType() == TokenType::Instruction) 
         inst_address++;
 }
 
 uint16_t assembleLine(std::string& line) {
     TokenList token_list = tokenize(line);
-    switch(token_list[0].mType) {
+    if (token_list.empty()) return 0;
+    switch(token_list[0].getType()) {
         case TokenType::Instruction: {
-            auto opcode = token_list[0].get<enum OP>();
+            auto opcode = token_list[0].get<OP::Type>();
             uint16_t inst = inst_table[opcode](token_list);
             inst_address++;
             return inst;
@@ -258,7 +257,7 @@ void checkBitRange(Token const& token, const int nBit) {
     }
     int lower = -(1 << (nBit-1));
     int upper =  (1 << (nBit-1)) - 1;
-    if (token.get<int>() < lower || token.get<int>() > upper)
+    if (token.getNumValue() < lower || token.getNumValue() > upper)
         throw asm_error::out_of_range_integer(nBit);
 }
 
@@ -268,6 +267,6 @@ void checkBitRangeUnsigned(Token const& token, const int nBit) {
     }
     int lower = 0;
     int upper = (1 << nBit) - 1;
-    if (token.get<int>() < lower || token.get<int>() > upper)
+    if (token.getNumValue() < lower || token.getNumValue() > upper)
         throw asm_error::out_of_range_integer_unsigned(nBit);
 }

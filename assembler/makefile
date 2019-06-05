@@ -27,4 +27,4 @@ test: $(TEST_OBJ)
 	./$(TEST_PROG)
 
 clean:
-	rm -f ./assembler/*.o
+	rm -f *.o

@@ -16,31 +16,36 @@ protected:
 };
 
 class TestToken : public TestCommon {};
+TEST_F(TestToken, Empty) {
+    EXPECT_EQ(0, tokenize("").size());
+    EXPECT_EQ(0, tokenize(";adklfj").size());
+}
+
 TEST_F(TestToken, GarbageAndComments) {
     std::string inst_str = "ASD #-123 , ,,, ,RSHFL 124A, #x-ac R1;ADD R0 R0 R0\n";
     TokenList tokens = tokenize(inst_str);
     EXPECT_EQ(6, tokens.size());
 
-    EXPECT_EQ(TokenType::Label,       tokens[0].mType);
-    EXPECT_EQ(TokenType::Number,      tokens[1].mType);
-    EXPECT_EQ(TokenType::Instruction, tokens[2].mType);
-    EXPECT_EQ(TokenType::Label,       tokens[3].mType);
-    EXPECT_EQ(TokenType::HexNumber,   tokens[4].mType);
-    EXPECT_EQ(TokenType::Register,    tokens[5].mType);
+    EXPECT_EQ(TokenType::Label,       tokens[0].getType());
+    EXPECT_EQ(TokenType::Number,      tokens[1].getType());
+    EXPECT_EQ(TokenType::Instruction, tokens[2].getType());
+    EXPECT_EQ(TokenType::Label,       tokens[3].getType());
+    EXPECT_EQ(TokenType::HexNumber,   tokens[4].getType());
+    EXPECT_EQ(TokenType::Register,    tokens[5].getType());
 
     EXPECT_EQ("ASD",       tokens[0].get<std::string>());
     EXPECT_EQ(-123,        tokens[1].get<int>());
-    EXPECT_EQ(OP::RSHFL,   tokens[2].get<enum OP>());
+    EXPECT_EQ(OP::RSHFL,   tokens[2].get<OP::Type>());
     EXPECT_EQ("124A",      tokens[3].get<std::string>());
     EXPECT_EQ(-172,        tokens[4].get<int>());
-    EXPECT_EQ(REG::R1,     tokens[5].get<enum REG>());
+    EXPECT_EQ(REG::R1,     tokens[5].get<REG::Type>());
     
     EXPECT_THROW(validationStep(tokens), asm_error::invalid_label_decl);
 }
 
 TEST_F(TestToken, BR) {
     /* TEST BR INSTRUCTIONS */
-    std::vector<std::tuple<std::string, enum OP, int>> inst_list {
+    std::vector<std::tuple<std::string, OP::Type, int>> inst_list {
         {"BR PIPPO\n",    OP::BR,    0b111},
         {"BRn PIPPO\n",   OP::BRn,   0b100},
         {"BRz PIPPO\n",   OP::BRz,   0b010},
@@ -54,15 +59,15 @@ TEST_F(TestToken, BR) {
         auto inst_str = std::get<0>(inst);
         auto inst_op  = std::get<1>(inst);
         auto cflags   = std::get<2>(inst);
-        auto opcode   = op_map.find(inst_op)->second;
+        auto opcode   = opEnumToOpcodeMap[inst_op];
 
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(2, tokens.size());
 
-        EXPECT_EQ(TokenType::Instruction, tokens[0].mType);
-        EXPECT_EQ(TokenType::Label,       tokens[1].mType);
+        EXPECT_EQ(TokenType::Instruction, tokens[0].getType());
+        EXPECT_EQ(TokenType::Label,       tokens[1].getType());
 
-        EXPECT_EQ(inst_op,                tokens[0].get<enum OP>());
+        EXPECT_EQ(inst_op,                tokens[0].get<OP::Type>());
         EXPECT_EQ(cflags,                 tokens[0].getCondFlags());
         EXPECT_EQ("PIPPO",                tokens[1].get<std::string>());
 
@@ -76,7 +81,7 @@ public:
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens);
         EXPECT_NO_THROW(validationStep(tokens));
-        EXPECT_EQ(inst, inst_table[tokens[0].get<enum OP>()](tokens)) << inst_str;
+        EXPECT_EQ(inst, inst_table[tokens[0].get<OP::Type>()](tokens)) << inst_str;
     }
     template <typename ErrorType>
     static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
@@ -89,7 +94,7 @@ public:
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens);
         EXPECT_NO_THROW(validationStep(tokens));
-        EXPECT_THROW(inst_table[tokens[0].get<enum OP>()](tokens), ErrorType) << inst_str;
+        EXPECT_THROW(inst_table[tokens[0].get<OP::Type>()](tokens), ErrorType) << inst_str;
     }
 };
 TEST_F(TestInstruction, RTI) {
@@ -142,7 +147,7 @@ TEST_F(TestInstruction, BR) {
     label_map.insert(std::pair("PIPPO", 0x3010));
 
     /* TEST BR INSTRUCTIONS */
-    const std::vector<std::pair<std::string, enum OP>> inst_list {
+    const std::vector<std::pair<std::string, OP::Type>> inst_list {
         {"BR PIPPO\n",    OP::BR},
         {"BRn PIPPO\n",   OP::BRn},
         {"BRz PIPPO\n",   OP::BRz},
@@ -155,14 +160,14 @@ TEST_F(TestInstruction, BR) {
     for(const auto & inst : inst_list) {
         auto inst_str = inst.first;
         auto inst_op  = inst.second;
-        auto opcode   = op_map.find(inst_op)->second;
+        auto opcode   = opEnumToOpcodeMap[inst_op];
 
         testGoodInstruction(
             inst_str,
             {{TokenType::Instruction, inst_op},
              {TokenType::Label      , "PIPPO"}},
             opcode                          << 12 | 
-            Token::getCondFlags(inst_op)    << 9  | 
+            brToCondFlag(inst_op)           << 9  | 
             (0x3010 - 0x3000)                & 0x7FF
         );
     }
@@ -195,7 +200,7 @@ TEST_F(TestInstruction, TRAP) {
          {TokenType::Number     , 35}}
     );    
     // EXPECT_EQ(OP_TRAP << 12 | 0x0023, 
-    //           inst_table[tokens[0].get<enum OP>()](tokens));
+    //           inst_table[tokens[0].get<OP::Type>()](tokens));
 
     testBadInstruction<asm_error::out_of_range_integer_unsigned>(
         "TRAP #x-23\n",
@@ -247,6 +252,36 @@ TEST_F(TestInstruction, JMP_RET) {
         {{TokenType::Instruction, OP::JMP},
          {TokenType::HexNumber  , 0x0023}}
     );
+    testBadInstruction<asm_error::invalid_format>(
+        "RET #x23\n",
+        {{TokenType::Instruction, OP::RET},
+         {TokenType::HexNumber  , 0x0023}}
+    );
+}
+
+TEST_F(TestInstruction, LD_ST_LDI_STI_LEA) {
+    label_map.insert(std::pair("PIPPO", 0x3010));
+    #define o(N) {#N, OP::N, OP_ ## N}
+    const std::vector<std::tuple<std::string, OP::Type, uint16_t>> inst_list {
+        o(LD), o(ST), o(LDI), o(STI), o(LEA),
+    };
+    #undef o
+    for(auto const& inst : inst_list) {
+        /* TEST INSTRUCTION */
+        testGoodInstruction(
+            std::get<0>(inst) + " R1 PIPPO\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+             {TokenType::Register   , REG::R1},
+             {TokenType::Label      , "PIPPO"}},
+            std::get<2>(inst) << 12 | R_R1 << 9 | (0x3010 - 0x3000) & 0x1FF
+        );
+        /* TEST BAD INSTRUCTION */
+        testBadInstruction<asm_error::invalid_format>(
+            std::get<0>(inst) + " #x23\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::HexNumber  , 0x0023}}
+        );
+    }
 }
 
 class TestAssembly : public TestCommon {};
