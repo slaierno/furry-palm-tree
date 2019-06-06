@@ -19,7 +19,7 @@ Token::Token(std::string token) : mToken(token) {
     else if(token[0] == '#') {
         if(token[1] == 'x') {
             mType = TokenType::HexNumber;
-            mValue = std::stoul(token.substr(2), 0, 16);
+            mValue = std::stol(token.substr(2), 0, 16);
         } else {
             mType = TokenType::Number;
             mValue = std::stol(token.substr(1), 0, 10);

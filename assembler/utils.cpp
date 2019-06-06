@@ -24,6 +24,24 @@ TokenList tokenize(std::string line) {
     return parse(parse);
 }
 
+template <const int N> void checkBitRange(Token const& token) {
+    static_assert(N >= 4 && N <= 11 && N != 7 && N != 10);
+    const int lower = -(1<<(N-1));
+    const int upper =  (1<<(N-1)) - 1;
+    const int value = token.getNumValue();
+    if (value < lower || value > upper) {
+        throw asm_error::out_of_range_integer(lower, upper);
+    }
+};
+template <const int N> void checkBitRangeUnsigned(Token const& token) {
+    static_assert(N >= 4 && N <= 11 && N != 7 && N != 10);
+    const int upper =  (1<<N) - 1;
+    int value = token.getNumValue();
+    if((value < 0) || (value > upper)) {
+        throw asm_error::out_of_range_integer(0, upper);
+    }
+};
+
 void validationStep(TokenList tokens) {
     switch(tokens[0].getType()) {
     case TokenType::Instruction: {
@@ -42,26 +60,34 @@ void validationStep(TokenList tokens) {
                 switch(tokens[0].get<OP::Type>()) {
                 case OP::ADD:
                 case OP::AND:
-                    if(tokens[3].isNumber()) checkBitRange(tokens[2], 5);
-                    return;
+                    switch(tokens[3].getType()) {
+                    case TokenType::Number:
+                        checkBitRange<5>(tokens[3]);
+                        return;
+                    case TokenType::HexNumber:
+                        checkBitRangeUnsigned<5>(tokens[3]);
+                        return;
+                    default:
+                        return;
+                    }
                 case OP::LD:
                 case OP::LDI:
                 case OP::LEA:
                 case OP::ST:
                 case OP::STI:
-                    checkBitRange(tokens[2], 9);
+                    checkBitRange<9>(tokens[2]);
                     return;
                 case OP::LDR:
                 case OP::STR:
-                    checkBitRange(tokens[3], 6);
+                    checkBitRange<6>(tokens[3]);
                     return;
                 case OP::LSHF:
                 case OP::RSHFL:
                 case OP::RSHFA:
-                    checkBitRangeUnsigned(tokens[2], 4);
+                    checkBitRange<6>(tokens[2]);
                     return;
                 case OP::TRAP:
-                    checkBitRangeUnsigned(tokens[1], 8);
+                    checkBitRangeUnsigned<8>(tokens[1]);
                     return;
                 default:
                     return;
@@ -248,22 +274,4 @@ uint16_t assembleLine(std::string& line) {
     default:
         throw std::logic_error("ERROR unknown error");
     }
-}
-
-void checkBitRange(Token const& token, const int nBit) {
-    if (nBit < 0 || nBit > 11)
-        throw std::logic_error("unexpected bit range, this is VERY bad");
-    int lower = -(1 << (nBit-1));
-    int upper =  (1 << (nBit-1)) - 1;
-    if (token.getNumValue() < lower || token.getNumValue() > upper)
-        throw asm_error::out_of_range_integer(nBit);
-}
-
-void checkBitRangeUnsigned(Token const& token, const int nBit) {
-    if (nBit < 0 || nBit > 8)
-        throw std::logic_error("unexpected bit range, this is VERY bad");
-    int lower = 0;
-    int upper = (1 << nBit) - 1;
-    if (token.getNumValue() < lower || token.getNumValue() > upper)
-        throw asm_error::out_of_range_integer_unsigned(nBit);
 }

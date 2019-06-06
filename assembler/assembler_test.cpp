@@ -78,21 +78,21 @@ class TestInstruction : public TestCommon {
 public:
     static void testGoodInstruction(const std::string& inst_str, const TokenList& tokens_check, uint16_t inst) {
         TokenList tokens = tokenize(inst_str);
-        EXPECT_EQ(tokens_check, tokens);
-        EXPECT_NO_THROW(validationStep(tokens));
+        EXPECT_EQ(tokens_check, tokens) << inst_str;
+        EXPECT_NO_THROW(validationStep(tokens)) << inst_str;
         EXPECT_EQ(inst, inst_table[tokens[0].get<OP::Type>()](tokens)) << inst_str;
     }
     template <typename ErrorType>
     static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
         TokenList tokens = tokenize(inst_str);
-        EXPECT_EQ(tokens_check, tokens);
+        EXPECT_EQ(tokens_check, tokens) << inst_str;
         EXPECT_THROW(validationStep(tokens), ErrorType) << inst_str;
     }
     template <typename ErrorType>
     static void testBadLabel(const std::string& inst_str, const TokenList& tokens_check) {
         TokenList tokens = tokenize(inst_str);
-        EXPECT_EQ(tokens_check, tokens);
-        EXPECT_NO_THROW(validationStep(tokens));
+        EXPECT_EQ(tokens_check, tokens) << inst_str;
+        EXPECT_NO_THROW(validationStep(tokens)) << inst_str;
         EXPECT_THROW(inst_table[tokens[0].get<OP::Type>()](tokens), ErrorType) << inst_str;
     }
 };
@@ -196,11 +196,9 @@ TEST_F(TestInstruction, TRAP) {
         "TRAP #35\n",
         {{TokenType::Instruction, OP::TRAP},
          {TokenType::Number     , 35}}
-    );    
-    // EXPECT_EQ(OP_TRAP << 12 | 0x0023, 
-    //           inst_table[tokens[0].get<OP::Type>()](tokens));
+    );
 
-    testBadInstruction<asm_error::out_of_range_integer_unsigned>(
+    testBadInstruction<asm_error::out_of_range_integer>(
         "TRAP #x-23\n",
         {{TokenType::Instruction, OP::TRAP},
          {TokenType::HexNumber  , -35}}
@@ -278,6 +276,93 @@ TEST_F(TestInstruction, LD_ST_LDI_STI_LEA) {
             std::get<0>(inst) + " #x23\n",
             {{TokenType::Instruction, std::get<1>(inst)},
             {TokenType::HexNumber  , 0x0023}}
+        );
+    }
+}
+
+TEST_F(TestInstruction, NOT) {
+    /* TEST INSTRUCTION */
+    testGoodInstruction(
+        "NOT R2 R3\n",
+        {{TokenType::Instruction, OP::NOT},
+         {TokenType::Register   , REG::R2},
+         {TokenType::Register   , REG::R3}},
+        OP_NOT << 12 | R_R2 << 9 | R_R3 << 6 | 0x3F
+    );
+
+    /* TEST BAD INSTRUCTION */
+    testBadInstruction<asm_error::invalid_format>(
+        "NOT R2\n",
+        {{TokenType::Instruction, OP::NOT},
+         {TokenType::Register   , REG::R2}}
+    );
+}
+
+TEST_F(TestInstruction, ADD_AND) {
+    #define o(N) {#N, OP::N, OP_ ## N}
+    const std::vector<std::tuple<std::string, OP::Type, uint16_t>> inst_list {
+        o(ADD), o(AND)
+    };
+    #undef o
+    for(auto const& inst : inst_list) {
+        /* TEST INSTRUCTION */
+        /* REG,REG */
+        testGoodInstruction(
+            std::get<0>(inst) + " R2 R3 R4\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::Register    , REG::R4}},
+            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | R_R4
+        );
+
+        /* REG,IMM5 */
+        testGoodInstruction(
+            std::get<0>(inst) + " R2 R3 #5\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::Number      , 5}},
+            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | 5
+        );
+        testGoodInstruction(
+            std::get<0>(inst) + " R2 R3 #x15\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::HexNumber   , 0x15}},
+            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | (-11 & 0x1F)
+        );
+        testGoodInstruction(
+            std::get<0>(inst) + " R2 R3 #-16\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::Number      , -16}},
+            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | 0x10
+        );
+
+        /* TEST BAD INSTRUCTION */
+        testBadInstruction<asm_error::out_of_range_integer>(
+            std::get<0>(inst) + " R2 R3 #x-F\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::HexNumber   , -15}}
+        );
+        testBadInstruction<asm_error::out_of_range_integer>(
+            std::get<0>(inst) + " R2 R3 #16\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::Number      , 16}}
+        );
+        testBadInstruction<asm_error::out_of_range_integer>(
+            std::get<0>(inst) + " R2 R3 #-17\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::Number      , -17}}
         );
     }
 }

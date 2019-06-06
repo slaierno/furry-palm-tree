@@ -13,5 +13,3 @@ TokenList   tokenize(std::string line);
 void        validationStep(TokenList tokens);
 void        validateLine(std::string&);
 uint16_t    assembleLine(std::string&);
-void        checkBitRange(Token const&, const int nBit);
-void        checkBitRangeUnsigned(Token const&, const int nBit);

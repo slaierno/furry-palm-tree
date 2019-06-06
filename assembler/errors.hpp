@@ -70,22 +70,11 @@ namespace asm_error {
 
     class out_of_range_integer : public std::logic_error {
     public:
-        out_of_range_integer(const int nBits) : std::logic_error(make_error_str(nBits)) {};
+        out_of_range_integer(const int lower, const int upper) : std::logic_error(make_error_str(lower, upper)) {};
     private:
-        static const std::string make_error_str(const int nBits) {
+        static const std::string make_error_str(const int lower, const int upper) {
             std::stringstream sstream;
-            sstream << "ERROR: int literal should have been between -2^" << nBits-1 << " and 2^" << nBits-1 << "-1";
-            return sstream.str();
-        }
-    };
-
-    class out_of_range_integer_unsigned : public std::logic_error {
-    public:
-        out_of_range_integer_unsigned(const int nBits) : std::logic_error(make_error_str(nBits)) {};
-    private:
-        static const std::string make_error_str(const int nBits) {
-            std::stringstream sstream;
-            sstream << "ERROR: int literal should have been between 0 and 2^" << nBits << "-1";
+            sstream << "ERROR: int literal should have been between " << lower << " and " << upper;
             return sstream.str();
         }
     };
