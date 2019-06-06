@@ -84,7 +84,7 @@ void validationStep(TokenList tokens) {
                 case OP::LSHF:
                 case OP::RSHFL:
                 case OP::RSHFA:
-                    checkBitRange<6>(tokens[2]);
+                    checkBitRangeUnsigned<4>(tokens[3]);
                     return;
                 case OP::TRAP:
                     checkBitRangeUnsigned<8>(tokens[1]);
@@ -202,8 +202,9 @@ void validationStep(TokenList tokens) {
         I[5]   = 1    -> ADDi, ANDi, RSHFL
         I[5-4] = 1    -> RSHFA
 
-        LF = 0b10 -> ANDi, ADDi, RSHFL
-            0b11 -> RSHFA
+        LF = 0b10 -> ANDi, ADDi
+             0b01 -> RSHFL
+             0b11 -> RSHFA
         CF = 0bnzp
 */
 
@@ -221,7 +222,8 @@ template <const unsigned op> uint16_t buildInstruction(const TokenList& tokens) 
     if(0x0C00000 & opbit) off_bits = 6;
     if(0x0300000 & opbit) off_bits = 5;
     if(0x7000000 & opbit) off_bits = 4;
-    if(0x2300000 & opbit && (tokens.back().isNumber())) inst |= 1 << 5; 
+    if(0x0300000 & opbit && (tokens.back().isNumber())) inst |= 1 << 5; 
+    if(0x2000000 & opbit) inst |= 0b01 << 4;
     if(0x4000000 & opbit) inst |= 0b11 << 4;
     if(0x0080000 & opbit) inst |= 0x3F;
     if(0x7FFC000 & opbit) r1 = tokens[1].getNumValue(3); 
