@@ -18,6 +18,9 @@ enum struct TokenType {
     Register,
     Number,
     HexNumber,
+    PseudoOp,
+    Trap,
+    String,
     Undefined
 };
 
@@ -31,6 +34,20 @@ namespace OP {
     };
 }
 
+/* List of pseudo operations */
+namespace POP {
+    enum Type {
+        ORIG, FILL, BLKW, STRINGZ, END,
+    };
+}
+
+namespace TRAP {
+    enum Type {
+        GETC, OUT, PUTS, IN, PUTSP, HALT,
+        COUNT //6
+    };
+}
+
 /* List of addressable registers */
 namespace REG { 
     enum Type {
@@ -38,6 +55,7 @@ namespace REG {
         COUNT //8
     };
 }
+
 
 /*********************************/
 /*            MAPS               */
@@ -53,13 +71,33 @@ const std::map<std::string, OP::Type> stringToOpEnumMap {
 #undef o
 
 /* Map which associates every assembly instruction with its binary opcode */
-#define o(N)      OP_ ## N
+#define o(N) OP_ ## N
 const std::array<uint16_t, OP::COUNT> opEnumToOpcodeMap {
     o(JMP), o(RTI), o(JSR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR),
     o(BR) , o(BR) , o(TRAP), o(JSR), o(JMP), o(LD) , o(ST) , o(LDI), o(STI), 
     o(LEA), o(NOT), o(ADD) , o(AND), o(LDR), o(STR), o(RES), o(RES), o(RES),
 };
 #undef o
+
+/* Map which ties pseudo-op strings to their enum type */
+#define p(N) {#N, POP::N}
+const std::map<std::string, POP::Type> stringToPOpEnumMap {
+    p(ORIG), p(FILL), p(BLKW), p(STRINGZ), p(END)
+};
+#undef p
+
+/* Map which ties trap strings to their enum type */
+#define t(N) {#N, TRAP::N}
+const std::map<std::string, TRAP::Type> stringToTrapEnumMap {
+    t(GETC), t(OUT), t(PUTS), t(IN), t(PUTSP), t(HALT)
+};
+#undef t
+
+#define t(N) TRAP_ ## N
+const std::array<uint16_t, TRAP::COUNT> trapEnumToOpcodeMap {
+    t(GETC), t(OUT), t(PUTS), t(IN), t(PUTSP), t(HALT)
+};
+#undef t
 
 /* Map which ties register strings to their enum type */
 #define r(N) {#N, REG::N}
@@ -74,7 +112,7 @@ const std::array<uint16_t, REG::COUNT> regEnumToOpcodeMap {
 };
 #undef r
 
-/* These consts represents all the possible arguments combinations */
+/* These consts represents all the possible arguments combinations for OP type*/
 const std::vector<enum TokenType> NO_ARGS {};
 const std::vector<enum TokenType> Label {TokenType::Label};
 const std::vector<enum TokenType> Reg {TokenType::Register};
