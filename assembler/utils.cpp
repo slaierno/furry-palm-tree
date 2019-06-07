@@ -25,7 +25,7 @@ TokenList tokenize(std::string line) {
 }
 
 template <const int N> void checkBitRange(Token const& token) {
-    static_assert(N >= 4 && N <= 11 && N != 7 && N != 10);
+    static_assert((N >= 4 && N <= 6) || N == 9 || N == 11);
     const int lower = -(1<<(N-1));
     const int upper =  (1<<(N-1)) - 1;
     const int value = token.getNumValue();
@@ -34,7 +34,7 @@ template <const int N> void checkBitRange(Token const& token) {
     }
 };
 template <const int N> void checkBitRangeUnsigned(Token const& token) {
-    static_assert(N >= 4 && N <= 11 && N != 7 && N != 10);
+    static_assert((N >= 4 && N <= 6) || N == 9 || N == 11);
     const int upper =  (1<<N) - 1;
     int value = token.getNumValue();
     if((value < 0) || (value > upper)) {
@@ -87,8 +87,7 @@ void validationStep(TokenList tokens) {
                     checkBitRangeUnsigned<4>(tokens[3]);
                     return;
                 case OP::TRAP:
-                    checkBitRangeUnsigned<8>(tokens[1]);
-                    return;
+                    throw asm_error::trap_inst_disabled();
                 default:
                     return;
                 }
@@ -103,6 +102,21 @@ void validationStep(TokenList tokens) {
             throw asm_error::duplicate_label(tokens[0]);
         label_map.insert(std::pair(tokens[0].get<std::string>(), inst_address));
         break;
+    case TokenType::Trap:
+        if (tokens.size() > 1)
+            throw asm_error::invalid_trap_call();
+        break;
+    case TokenType::PseudoOp:
+        //Only .orig and .end are allowed as first token
+        switch(tokens[0].get<POP::Type>()) {
+        case POP::ORIG:
+        case POP::END:
+            if (tokens.size() == 1 || tokens.size() > 2)
+                throw asm_error::invalid_pseudo_op(".orig and .end must be followed by an address and only an address");
+            break;
+        default:
+            throw asm_error::invalid_pseudo_op();
+        }
     default:
         /* Only one token which may be a reserved one used as a label */
         if (tokens.size() == 1)

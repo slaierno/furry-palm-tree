@@ -43,6 +43,23 @@ TEST_F(TestToken, GarbageAndComments) {
     EXPECT_THROW(validationStep(tokens), asm_error::invalid_label_decl);
 }
 
+TEST_F(TestToken, PseudoOP) {
+    std::string inst_str = ".orig .fill .blkw .stringz .end\n";
+    TokenList tokens = tokenize(inst_str);
+    EXPECT_EQ(5, tokens.size());
+
+    for(auto const& token : tokens)
+        EXPECT_EQ(TokenType::PseudoOp, token.getType());
+
+    EXPECT_EQ(POP::ORIG   , tokens[0].get<POP::Type>());
+    EXPECT_EQ(POP::FILL   , tokens[1].get<POP::Type>());
+    EXPECT_EQ(POP::BLKW   , tokens[2].get<POP::Type>());
+    EXPECT_EQ(POP::STRINGZ, tokens[3].get<POP::Type>());
+    EXPECT_EQ(POP::END    , tokens[4].get<POP::Type>());
+    
+    EXPECT_THROW(validationStep(tokens), asm_error::invalid_pseudo_op);
+}
+
 TEST_F(TestToken, BR) {
     /* TEST BR INSTRUCTIONS */
     std::vector<std::tuple<std::string, OP::Type, int>> inst_list {
@@ -183,22 +200,20 @@ TEST_F(TestInstruction, BR) {
 }
 
 TEST_F(TestInstruction, TRAP) {
-    /* TEST INSTRUCTION */
-    testGoodInstruction(
+    /* TEST BAD INSTRUCTION */
+    testBadInstruction<asm_error::trap_inst_disabled>(
         "TRAP #x23\n",
         {{TokenType::Instruction, OP::TRAP},
-         {TokenType::HexNumber  , 0x0023}},
-        OP_TRAP << 12 | 0x0023
+         {TokenType::HexNumber  , 0x0023}}
     );
 
-    /* TEST BAD INSTRUCTION */
     testBadInstruction<asm_error::invalid_format>(
         "TRAP #35\n",
         {{TokenType::Instruction, OP::TRAP},
          {TokenType::Number     , 35}}
     );
 
-    testBadInstruction<asm_error::out_of_range_integer>(
+    testBadInstruction<asm_error::trap_inst_disabled>(
         "TRAP #x-23\n",
         {{TokenType::Instruction, OP::TRAP},
          {TokenType::HexNumber  , -35}}

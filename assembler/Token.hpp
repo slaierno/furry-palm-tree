@@ -6,7 +6,7 @@
 #include <variant>
 #include "commons.hpp"
 
-using TokenValue = std::variant<OP::Type, REG::Type, int, std::string>;
+using TokenValue = std::variant<OP::Type, REG::Type, TRAP::Type, POP::Type, int, std::string>;
 class Token {
     std::string mToken;
     enum TokenType mType;

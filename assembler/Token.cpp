@@ -1,4 +1,5 @@
 #include <type_traits>
+#include <algorithm>
 #include "Token.hpp"
 #include "utils.hpp"
 #include "errors.hpp"
@@ -8,15 +9,7 @@
 /*********************************/
 
 Token::Token(std::string token) : mToken(token) {
-    if(stringToOpEnumMap.find(token) != stringToOpEnumMap.end()) {
-        mType = TokenType::Instruction;
-        mValue = stringToOpEnumMap.find(token)->second;
-    } 
-    else if(stringToRegEnumMap.find(token) != stringToRegEnumMap.end()) {
-        mType = TokenType::Register;
-        mValue = stringToRegEnumMap.find(token)->second;
-    }
-    else if(token[0] == '#') {
+    if(token[0] == '#') {
         if(token[1] == 'x') {
             mType = TokenType::HexNumber;
             mValue = std::stol(token.substr(2), 0, 16);
@@ -24,7 +17,30 @@ Token::Token(std::string token) : mToken(token) {
             mType = TokenType::Number;
             mValue = std::stol(token.substr(1), 0, 10);
         }
-    } else {
+    }
+    else if (token[0] == '.') {
+        token.erase(0,1);
+        std::transform(token.begin(), token.end(), token.begin(), ::toupper); 
+        if(stringToPOpEnumMap.find(token) == stringToPOpEnumMap.end())
+            throw asm_error::unknown_pseudo_op(token);
+        mType = TokenType::PseudoOp;
+        mValue = stringToPOpEnumMap.find(token)->second;
+    }
+    else if (token[0] == '"') {
+        if(token.back() != '"')
+            throw asm_error::invalid_string(token);
+        mType = TokenType::String;
+        mValue = token.substr(1, token.length()-2);
+    }
+    else if(stringToOpEnumMap.find(token) != stringToOpEnumMap.end()) {
+        mType = TokenType::Instruction;
+        mValue = stringToOpEnumMap.find(token)->second;
+    } 
+    else if(stringToRegEnumMap.find(token) != stringToRegEnumMap.end()) {
+        mType = TokenType::Register;
+        mValue = stringToRegEnumMap.find(token)->second;
+    }
+    else {
         mType = TokenType::Label;
         mValue = token;
     }
