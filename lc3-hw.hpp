@@ -9,7 +9,12 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <conio.h>
-#elif
+#elif _ANDROID
+    #include <unistd.h>
+    #include <termios.h>
+    #include <sys/mman.h>
+#else
+    #include <unistd.h>
     #include <sys/termios.h>
     #include <sys/mman.h>
 #endif
@@ -138,7 +143,7 @@ int read_image(const char* image_path);
 void ErrorExit (char* lpszMessage);
 void disable_input_buffering();
 void restore_input_buffering();
-#elif
+#else
 void disable_input_buffering();
 void restore_input_buffering();
 #endif

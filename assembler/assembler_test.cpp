@@ -432,7 +432,7 @@ TEST_F(TestInstruction, SHF) {
     #undef o    
 
     for(auto const& inst : inst_list) {
-        auto flag = [](const decltype(inst)& i)->uint16_t { 
+        auto flag = [](decltype(inst)& i)->uint16_t { 
             return ((std::get<1>(i) == OP::RSHFA) << 1) | 
                     (std::get<1>(i) != OP::LSHF);
         };

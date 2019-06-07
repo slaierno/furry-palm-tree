@@ -158,7 +158,12 @@ bool Token::operator==(const Token& rhs) const{
             case TokenType::HexNumber:
                 return lhs.get<int>() == rhs.get<int>();
             case TokenType::Label:
+            case TokenType::String:
                 return lhs.get<std::string>() == rhs.get<std::string>();
+            case TokenType::PseudoOp:
+                return lhs.get<POP::Type>() == rhs.get<POP::Type>();
+            case TokenType::Trap:
+                return lhs.get<TRAP::Type>() == rhs.get<TRAP::Type>();
             default:
                 return false;
         }

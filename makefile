@@ -12,7 +12,8 @@ TEST_OBJ = main_test.o \
 		   memory.o
 TEST_PROG = main_test.exe
 TEST_LDFLAGS = -lgtest
-TEST_CPPFLAGS = -g
+CPPFLAGS = -pthread
+TEST_CPPFLAGS = -g $(CPPFLAGS)
 
 %.o: %.cpp $(DEPS)
 	$(CC) -g -c -o $@ $< $(CPPFLAGS)

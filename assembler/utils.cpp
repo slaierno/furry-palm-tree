@@ -6,7 +6,7 @@ TokenList tokenize(std::string line) {
     TokenList token_list;
 
     /* Remove comments */
-    line = line.substr(std::min(0ULL, line.find_first_not_of(" ,\n")), 
+    line = line.substr(std::min(0UL, line.find_first_not_of(" ,\n")), 
                                       line.find_first_of(";"));
 
     /* Extract tokens */

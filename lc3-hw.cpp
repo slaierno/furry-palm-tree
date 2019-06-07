@@ -73,7 +73,7 @@ void restore_input_buffering()
     SetConsoleMode(hStdin, fdwSaveOldMode);
 }
 
-#elif
+#else
 
 struct termios original_tio;
 

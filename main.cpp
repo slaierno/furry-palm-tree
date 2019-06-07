@@ -1,4 +1,7 @@
 #include <iostream>
+#ifndef _WIN32
+#include <signal.h>
+#endif
 
 #include "lc3-hw.hpp"
 #include "memory.hpp"

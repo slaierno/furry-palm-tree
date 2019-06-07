@@ -33,8 +33,8 @@ int main(int argc, const char* argv[])
             }
             writeMachineCode(outfile, start_address);
             inst_address = start_address;
-	    asm_file.clear();
-	    asm_file.seekg(std::ios::beg);
+            asm_file.clear();
+            asm_file.seekg(std::ios::beg);
             while (getline(asm_file, line)) {
                 writeMachineCode(outfile, assembleLine(line));
             }
