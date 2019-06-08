@@ -19,8 +19,9 @@ public:
         static_assert(std::is_same<int        , T>::value ||
                       std::is_same<std::string, T>::value ||
                       std::is_same<const char*, T>::value ||
-                      std::is_same<OP::Type   , T>::value ||
-                      std::is_same<REG::Type  , T>::value);
+                      std::is_same<  OP::Type , T>::value ||
+                      std::is_same< REG::Type , T>::value ||
+                      std::is_same<TRAP::Type , T>::value);
     };
 
 

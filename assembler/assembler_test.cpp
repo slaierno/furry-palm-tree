@@ -80,16 +80,18 @@ TEST_F(TestToken, Trap) {
 
 TEST_F(TestToken, BR) {
     /* TEST BR INSTRUCTIONS */
-    std::vector<std::tuple<std::string, OP::Type, int>> inst_list {
-        {"BR PIPPO\n",    OP::BR,    0b111},
-        {"BRn PIPPO\n",   OP::BRn,   0b100},
-        {"BRz PIPPO\n",   OP::BRz,   0b010},
-        {"BRp PIPPO\n",   OP::BRp,   0b001},
-        {"BRnz PIPPO\n",  OP::BRnz,  0b110},
-        {"BRnp PIPPO\n",  OP::BRnp,  0b101},
-        {"BRzp PIPPO\n",  OP::BRzp,  0b011},
-        {"BRnzp PIPPO\n", OP::BRnzp, 0b111},
+    #define b(type, value) {"BR" #type " PIPPO", OP::BR ## type, value}
+    const std::vector<std::tuple<std::string, OP::Type, int>> inst_list {
+        b(   , 0b111),
+        b(n  , 0b100),
+        b(z  , 0b010),
+        b(p  , 0b001),
+        b(nz , 0b110),
+        b(np , 0b101),
+        b(zp , 0b011),
+        b(nzp, 0b111),
     };
+    #undef b
     for(const auto & inst : inst_list) {
         auto inst_str = std::get<0>(inst);
         auto inst_op  = std::get<1>(inst);
@@ -115,7 +117,9 @@ public:
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens) << inst_str;
         EXPECT_NO_THROW(validationStep(tokens)) << inst_str;
-        EXPECT_EQ(inst, inst_table[tokens[0].get<OP::Type>()](tokens)) << inst_str;
+        auto temp_inst_copy = inst_str.substr();
+        EXPECT_EQ(inst, assembleLine(temp_inst_copy)) << inst_str;
+        inst_address--;
     }
     template <typename ErrorType>
     static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
@@ -180,15 +184,16 @@ TEST_F(TestInstruction, BR) {
     label_map.insert(std::pair("PIPPO", 0x3010));
 
     /* TEST BR INSTRUCTIONS */
+    #define b(type, value) {"BR" #type " PIPPO\n", OP::BR ## type}
     const std::vector<std::pair<std::string, OP::Type>> inst_list {
-        {"BR PIPPO\n",    OP::BR},
-        {"BRn PIPPO\n",   OP::BRn},
-        {"BRz PIPPO\n",   OP::BRz},
-        {"BRp PIPPO\n",   OP::BRp},
-        {"BRnz PIPPO\n",  OP::BRnz},
-        {"BRnp PIPPO\n",  OP::BRnp},
-        {"BRzp PIPPO\n",  OP::BRzp},
-        {"BRnzp PIPPO\n", OP::BRnzp},
+        b(   , 0b111),
+        b(n  , 0b100),
+        b(z  , 0b010),
+        b(p  , 0b001),
+        b(nz , 0b110),
+        b(np , 0b101),
+        b(zp , 0b011),
+        b(nzp, 0b111),
     };
     for(const auto & inst : inst_list) {
         auto inst_str = inst.first;
@@ -218,6 +223,24 @@ TEST_F(TestInstruction, BR) {
 }
 
 TEST_F(TestInstruction, TRAP) {
+    /* TEST TRAP INSTRUCTIONS */
+    #define t(trap) {#trap, TRAP::trap, trapEnumToOpcodeMap[TRAP::trap]}
+    const std::vector<std::tuple<std::string, TRAP::Type, uint16_t>> inst_list {
+        t(GETC),
+        t(OUT),
+        t(PUTS),
+        t(IN),
+        t(PUTSP),
+        t(HALT),
+    };
+    #undef t
+    for(auto const& inst : inst_list)
+        testGoodInstruction(
+            std::get<0>(inst),
+            {{TokenType::Trap, std::get<1>(inst)}},
+            OP_TRAP << 12  | std::get<2>(inst)
+        );
+
     /* TEST BAD INSTRUCTION */
     testBadInstruction<asm_error::trap_inst_disabled>(
         "TRAP #x23\n",

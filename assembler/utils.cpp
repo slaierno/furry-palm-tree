@@ -279,6 +279,14 @@ uint16_t assembleLine(std::string& line) {
     TokenList token_list = tokenize(line);
     if (token_list.empty()) return 0;
     switch (token_list[0].getType()) {
+    case TokenType::Trap: {
+        /* Modify token_list to obtain a TRAP xvector instruction */
+        /* XXX TRAP::Type should be accessible as a hexnumber */
+        token_list = {
+            Token(TokenType::Instruction, OP::TRAP),
+            Token(TokenType::HexNumber  , (int)trapEnumToOpcodeMap[token_list[0].get<TRAP::Type>()]),
+        };
+    }
     case TokenType::Instruction: {
         auto opcode = token_list[0].get<OP::Type>();
         uint16_t inst = inst_table[opcode](token_list);
