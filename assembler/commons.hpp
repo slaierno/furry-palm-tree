@@ -38,6 +38,7 @@ namespace OP {
 namespace POP {
     enum Type {
         ORIG, FILL, BLKW, STRINGZ, END,
+        COUNT //5
     };
 }
 

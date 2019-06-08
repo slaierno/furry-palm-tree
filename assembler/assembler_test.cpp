@@ -60,6 +60,24 @@ TEST_F(TestToken, PseudoOP) {
     EXPECT_THROW(validationStep(tokens), asm_error::invalid_pseudo_op);
 }
 
+TEST_F(TestToken, Trap) {
+    std::string inst_str = "GETC OUT PUTS IN PUTSP HALT\n";
+    TokenList tokens = tokenize(inst_str);
+    EXPECT_EQ(6, tokens.size());
+
+    for(auto const& token : tokens)
+        EXPECT_EQ(TokenType::Trap, token.getType());
+
+    EXPECT_EQ(TRAP::GETC , tokens[0].get<TRAP::Type>());
+    EXPECT_EQ(TRAP::OUT  , tokens[1].get<TRAP::Type>());
+    EXPECT_EQ(TRAP::PUTS , tokens[2].get<TRAP::Type>());
+    EXPECT_EQ(TRAP::IN   , tokens[3].get<TRAP::Type>());
+    EXPECT_EQ(TRAP::PUTSP, tokens[4].get<TRAP::Type>());
+    EXPECT_EQ(TRAP::HALT , tokens[5].get<TRAP::Type>());
+    
+    EXPECT_THROW(validationStep(tokens), asm_error::invalid_trap_call);
+}
+
 TEST_F(TestToken, BR) {
     /* TEST BR INSTRUCTIONS */
     std::vector<std::tuple<std::string, OP::Type, int>> inst_list {

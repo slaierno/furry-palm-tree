@@ -35,10 +35,15 @@ Token::Token(std::string token) : mToken(token) {
     else if(stringToOpEnumMap.find(token) != stringToOpEnumMap.end()) {
         mType = TokenType::Instruction;
         mValue = stringToOpEnumMap.find(token)->second;
-    } 
+    }
     else if(stringToRegEnumMap.find(token) != stringToRegEnumMap.end()) {
+        //TODO we can check for register type analyzing the first letter
         mType = TokenType::Register;
         mValue = stringToRegEnumMap.find(token)->second;
+    }
+    else if(stringToTrapEnumMap.find(token) != stringToTrapEnumMap.end()) {
+        mType = TokenType::Trap;
+        mValue = stringToTrapEnumMap.find(token)->second;
     }
     else {
         mType = TokenType::Label;
