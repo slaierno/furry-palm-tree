@@ -528,10 +528,13 @@ TEST_F(TestAssembly, Labels) {
         "RTI\n",          //x4001
         "PLUTO\n",        //x4002
         "JSR PAPERINO\n", //x4002
-        ".end"
     };
     for(auto inst_str : inst_list)
         EXPECT_NO_THROW(validateLine(inst_str)) << inst_str;
+
+    EXPECT_THROW(validateLine(".orig #x5000"), asm_warning::double_orig_decl);
+    EXPECT_NO_THROW(validateLine(".end"));
+    EXPECT_THROW(validateLine("TOTAL GARBAGE"), asm_warning::inst_after_end);
 
     EXPECT_NE(label_map.end(), label_map.find("PIPPO"));
     EXPECT_NE(label_map.end(), label_map.find("PAPERINO"));

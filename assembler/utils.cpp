@@ -17,7 +17,8 @@ void updateInstructionAddress(unsigned int n = 1) {
     checkAddress(inst_address);
 }
 
-TokenList tokenize(std::string line) {
+TokenList tokenize(const std::string& line_ref) {
+    std::string line = line_ref;
     TokenList token_list;
 
     /* Remove comments */
@@ -150,8 +151,6 @@ void validationStep(TokenList tokens) {
             if(tokens.size() != 2
             || tokens[1].getType() != TokenType::HexNumber)
                 throw asm_error::invalid_pseudo_op(".orig must be followed by an address");
-            inst_address = start_address = tokens[1].getNumValue();
-            checkAddress(inst_address);
             break;
         case POP::END:
             if (tokens.size() != 1)
@@ -304,7 +303,7 @@ uint16_t (*inst_table[OP::COUNT])(const TokenList&) = {
     buildInstruction<24>, buildInstruction<25>, buildInstruction<26>,
 };
 
-void validateLine(std::string& line) {
+void validateLine(const std::string& line) {
     static bool origin_find = false;
     static bool end_find = false;
     if(end_find) throw asm_warning::inst_after_end();
@@ -312,12 +311,16 @@ void validateLine(std::string& line) {
     TokenList token_list = tokenize(line);
     if(token_list.empty()) return;
     validationStep(token_list);
+    
+    /* Post-validation phase */
     switch(token_list[0].getType()) {
     case TokenType::PseudoOp:
         switch(token_list[0].get<POP::Type>()) {
         case POP::ORIG:
             if(origin_find) throw asm_warning::double_orig_decl();
             origin_find = true;
+            inst_address = start_address = token_list[1].getNumValue();
+            checkAddress(inst_address);
             break;
         case POP::END:
             end_find = true;
