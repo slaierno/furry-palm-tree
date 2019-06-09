@@ -2,6 +2,21 @@
 #include "utils.hpp"
 #include "errors.hpp"
 
+//TODO inst_address should be somehow protected
+uint16_t  inst_address = 0;
+uint16_t start_address = 0x3000;
+std::map<std::string, uint16_t> label_map;
+
+void checkAddress(const uint16_t address) {
+    if(address < userSpaceLower || address > userSpaceUpper)
+        throw asm_error::out_of_user_space(address);
+}
+//TODO test out of space error
+void updateInstructionAddress(unsigned int n = 1) {
+    inst_address+=n;
+    checkAddress(inst_address);
+}
+
 TokenList tokenize(std::string line) {
     TokenList token_list;
 
@@ -96,11 +111,33 @@ void validationStep(TokenList tokens) {
         throw asm_error::invalid_format(tokens);
     } break;
     case TokenType::Label:
-        if (tokens.size() > 1)
-            throw asm_error::invalid_label_decl();
+        if (tokens.size() != 1 && tokens.size() != 3) {
+            throw asm_error::generic_error("labels must be alone or followed by a pseudo-op");
+        }
         if (label_map.find(tokens[0].get<std::string>()) != label_map.end())
             throw asm_error::duplicate_label(tokens[0]);
         label_map.insert(std::pair(tokens[0].get<std::string>(), inst_address));
+        if(tokens.size() == 3) {
+            /* Label can be followed only by certain pseudo-ops */
+            if(tokens[1].getType() != TokenType::PseudoOp)
+                throw asm_error::generic_error("expected a pseudo-op");
+            switch(tokens[1].get<POP::Type>()) {
+                case POP::FILL:
+                case POP::BLKW:
+                    if(!tokens[2].isNumber()) 
+                        throw asm_error::invalid_format(tokens);
+                break;
+                case POP::STRINGZ:
+                    if(tokens[2].getType() != TokenType::String)
+                        throw asm_error::invalid_format(tokens);
+                break;
+                case POP::ORIG:
+                case POP::END:
+                default:
+                    throw asm_error::invalid_format(tokens);
+            }
+
+        }
         break;
     case TokenType::Trap:
         if (tokens.size() > 1)
@@ -110,21 +147,24 @@ void validationStep(TokenList tokens) {
         //Only .orig and .end are allowed as first token
         switch(tokens[0].get<POP::Type>()) {
         case POP::ORIG:
+            if(tokens.size() != 2
+            || tokens[1].getType() != TokenType::HexNumber)
+                throw asm_error::invalid_pseudo_op(".orig must be followed by an address");
+            inst_address = start_address = tokens[1].getNumValue();
+            checkAddress(inst_address);
+            break;
         case POP::END:
-            if (tokens.size() == 1 || tokens.size() > 2)
-                throw asm_error::invalid_pseudo_op(".orig and .end must be followed by an address and only an address");
+            if (tokens.size() != 1)
+                throw asm_error::invalid_pseudo_op(".end shall not be followed by anything else");
             break;
         default:
             throw asm_error::invalid_pseudo_op();
         }
+        break;
     default:
         /* Only one token which may be a reserved one used as a label */
         if (tokens.size() == 1)
             throw asm_error::invalid_label_name(tokens[0]);
-        else {
-            // TODO miscellaneous
-            throw asm_error::invalid_token();
-        }
         break;
     }
 }
@@ -264,15 +304,40 @@ uint16_t (*inst_table[OP::COUNT])(const TokenList&) = {
     buildInstruction<24>, buildInstruction<25>, buildInstruction<26>,
 };
 
-uint16_t inst_address = 0x3000;
-std::map<std::string, uint16_t> label_map;
-
 void validateLine(std::string& line) {
+    static bool origin_find = false;
+    static bool end_find = false;
+    if(end_find) throw asm_warning::inst_after_end();
+
     TokenList token_list = tokenize(line);
     if(token_list.empty()) return;
     validationStep(token_list);
-    if(token_list[0].getType() == TokenType::Instruction) 
-        inst_address++;
+    switch(token_list[0].getType()) {
+    case TokenType::PseudoOp:
+        switch(token_list[0].get<POP::Type>()) {
+        case POP::ORIG:
+            if(origin_find) throw asm_warning::double_orig_decl();
+            origin_find = true;
+            break;
+        case POP::END:
+            end_find = true;
+            break;
+        default:
+            throw asm_error::unexpected();
+        }
+        break;
+    case TokenType::Instruction:
+        if(!origin_find) throw asm_warning::inst_before_origin();
+        updateInstructionAddress();
+        break;
+    case TokenType::Label:
+        if(token_list.size() > 1) {
+            throw asm_error::todo(".fill, .blkw and .stringz still not implemented");
+        }
+        break;
+    default:
+        throw asm_error::unexpected("validationStep() has failed and this is really bad");
+    } 
 }
 
 uint16_t assembleLine(std::string& line) {
@@ -290,10 +355,12 @@ uint16_t assembleLine(std::string& line) {
     case TokenType::Instruction: {
         auto opcode = token_list[0].get<OP::Type>();
         uint16_t inst = inst_table[opcode](token_list);
-        inst_address++;
+        updateInstructionAddress();
         return inst;
     }
     case TokenType::Label:
+        return 0;
+    case TokenType::PseudoOp:
         return 0;
     default:
         throw std::logic_error("ERROR unknown error");

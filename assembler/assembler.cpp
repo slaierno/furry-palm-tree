@@ -26,7 +26,6 @@ int main(int argc, const char* argv[])
         if (asm_file.is_open()) {
             std::ofstream outfile;
             outfile.open("junk.obj", std::ios::binary | std::ios::out);
-            const uint16_t start_address = inst_address; //TODO let's always assume that we are starting at address x3000
             std::string line;
             while (getline(asm_file, line)) {
                 validateLine(line);

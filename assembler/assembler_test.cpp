@@ -7,8 +7,7 @@
 
 class TestCommon : public ::testing::Test {
 protected:
-    const uint16_t start_address;
-    TestCommon(uint16_t orig_address = 0x3000) : start_address(inst_address = orig_address) {};
+    TestCommon() {inst_address = start_address;};
     ~TestCommon() {
         label_map.clear();
     };
@@ -39,7 +38,7 @@ TEST_F(TestToken, GarbageAndComments) {
     EXPECT_EQ(-172,        tokens[4].get<int>());
     EXPECT_EQ(REG::R1,     tokens[5].get<REG::Type>());
     
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_label_decl);
+    EXPECT_THROW(validationStep(tokens), asm_error::generic_error);
 }
 
 TEST_F(TestToken, PseudoOP) {
@@ -112,9 +111,6 @@ TEST_F(TestToken, BR) {
 
 class TestInstruction : public TestCommon {
 public:
-    //All this tests should start with .orig x3000
-    TestInstruction() : TestCommon(0x3000) {};
-
     static void testGoodInstruction(const std::string& inst_str, const TokenList& tokens_check, uint16_t inst) {
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens) << inst_str;
@@ -524,14 +520,15 @@ TEST_F(TestInstruction, SHF) {
 class TestAssembly : public TestCommon {};
 
 TEST_F(TestAssembly, Labels) {
-    uint16_t start_address = inst_address;
     std::vector<std::string> inst_list = {
-        "PIPPO\n",        //x3000
-        "JSR PLUTO\n",    //x3000
-        "PAPERINO\n",     //x3001
-        "RTI\n",          //x3001
-        "PLUTO\n",        //x3002
-        "JSR PAPERINO\n", //x3002
+        ".orig #x4000",
+        "PIPPO\n",        //x4000
+        "JSR PLUTO\n",    //x4000
+        "PAPERINO\n",     //x4001
+        "RTI\n",          //x4001
+        "PLUTO\n",        //x4002
+        "JSR PAPERINO\n", //x4002
+        ".end"
     };
     for(auto inst_str : inst_list)
         EXPECT_NO_THROW(validateLine(inst_str)) << inst_str;
@@ -539,20 +536,22 @@ TEST_F(TestAssembly, Labels) {
     EXPECT_NE(label_map.end(), label_map.find("PIPPO"));
     EXPECT_NE(label_map.end(), label_map.find("PAPERINO"));
     EXPECT_NE(label_map.end(), label_map.find("PLUTO"));
-    EXPECT_EQ(0x3000,          label_map.find("PIPPO")->second);
-    EXPECT_EQ(0x3001,          label_map.find("PAPERINO")->second);
-    EXPECT_EQ(0x3002,          label_map.find("PLUTO")->second);
+    EXPECT_EQ(0x4000,          label_map.find("PIPPO")->second);
+    EXPECT_EQ(0x4001,          label_map.find("PAPERINO")->second);
+    EXPECT_EQ(0x4002,          label_map.find("PLUTO")->second);
     
     inst_address = start_address;
+    ASSERT_EQ(0x4000, inst_address);
+
     std::vector<uint16_t> code_list;
     for(auto inst_str : inst_list) EXPECT_NO_THROW({
         uint16_t inst = assembleLine(inst_str);
         if (inst != 0) code_list.push_back(inst);
-    });
+    }) << inst_str;
     EXPECT_EQ(3, code_list.size());
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x3002 - 0x3000) & 0x7FF), code_list[0]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4002 - 0x4000) & 0x7FF), code_list[0]);
     EXPECT_EQ(OP_RTI << 12,                                         code_list[1]);
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x3001 - 0x3002) & 0x7FF), code_list[2]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4001 - 0x4002) & 0x7FF), code_list[2]);
 }
 
 int main(int argc, char* argv[])

@@ -87,7 +87,7 @@ int16_t Token::getNumValue(unsigned int n) const {
 uint16_t Token::getCondFlags() const {
     uint8_t cf = brToCondFlag(get<OP::Type>()); 
     if(cf) return cf; 
-    else throw asm_error::invalid_instruction("trying to get condition flags from a non-BR instruction");
+    else throw asm_error::generic_error("trying to get condition flags from a non-BR instruction");
 };
 
 /*********************************/

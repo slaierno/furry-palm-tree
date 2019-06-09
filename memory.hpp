@@ -13,7 +13,8 @@ enum
 
 /* 65536 locations */
 extern uint16_t memory[UINT16_MAX];
-
+const static uint16_t userSpaceLower = 0x3000;
+const static uint16_t userSpaceUpper = 0xFDFF;
 /* Memory Map:
  *
  *   0x0000 +----------------------+
