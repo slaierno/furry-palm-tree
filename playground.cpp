@@ -1,6 +1,21 @@
 #include "gtest/gtest.h"
 #include <cstdint>
 
+/* This is a small playground to test little ASM subroutines.
+ * 
+ * No memory-related instructions are implemented. They
+ * should not be necessary since the goal of this playground
+ * is to test little snippets. But they could be easily added
+ * if necessary.
+ * 
+ * No trap and interrupts, of course.
+ * 
+ * No JMP, JSR and JSRR too. They are...difficult to emulate,
+ * since goto does not work that way. There are a couple of
+ * options to implement them but they are way more complicated
+ * then I want and I prefer to keep things easy here.
+ */
+
 uint16_t R0, R1, R2, R3, R4, R5, R6, R7;
 
 enum {
@@ -16,54 +31,75 @@ void set_cc(uint16_t R) {
     else                CC = NEG;
 }
 
-TEST(Division, LongDivision) {
+#define ADD(DR, SR1, SR2) ({set_cc(DR = SR1 + SR2);})
+#define ADDi(DR, SR1, imm5) ({set_cc(DR = SR1 + imm5);})
+#define AND(DR, SR1, SR2) ({set_cc(DR = SR1 & SR2);})
+#define ANDi(DR, SR1, imm5) ({set_cc(DR = SR1 & imm5);})
+#define BR(label) ({goto label;})
+#define BRn(label) ({if(CC == NEG) goto label;})
+#define BRz(label) ({if(CC == ZRO) goto label;})
+#define BRp(label) ({if(CC == POS) goto label;})
+#define BRnz(label) ({if(CC != POS) goto label;})
+#define BRnp(label) ({if(CC != ZRO) goto label;})
+#define BRzp(label) ({if(CC != NEG) goto label;})
+#define BRnzp(label) ({goto label;})
+#define NOT(DR, SR) ({set_cc(DR = ~SR);})
+#define LSHF(DR, SR, imm4) ({set_cc(DR = SR << imm4);})
+#define RSHFL(DR, SR, imm4) ({set_cc(DR = SR >> imm4);})
+#define RSHFA(DR, SR, imm4) ({set_cc(DR = (SR >> imm4) | (0xFF << (16-imm4)));})
+
+TEST(Operations, Multiplication) {
     uint16_t N = 147, D = 13; //Q=11, R=4
     R1 = N, R2 = D;
     {
-        R0 = 0;
-    back:
-        R2 <<= 1;
-        if(R1 > R2) goto back;
-        if(R1 == R2) goto next;
-        R2 >>= 1;
-    next:
-        R3 = R1 - R2;
-        R0 <<= 1;
-        if(R3 < 0x8000) {
-            R0 |= 1;
-            R1 = R3;
-        }
-        if(R2 == D) goto end;
-        R2 >>= 1;
-        goto next;
-    end:
-        EXPECT_EQ(N/D, R0);
-    }
+        AND(R0, R0, 0);
+        ADD(R2, R2, 0);
+        LOOP:
+            BRz(DONE);
+            AND(R3, R2, 0x1);
+            BRz(SKIP);
+                ADD(R0, R0, R1);
+            SKIP:
+            LSHF(R1, R1, 1);
+            RSHFL(R2, R2, 1);
+            BR(LOOP);
+        DONE:
 
+        EXPECT_EQ(N*D, R0);
+    }
+}
+
+TEST(Operations, LongDivision) {
+    uint16_t N = 147, D = 13; //Q=11, R=4
     R1 = N, R2 = D;
     {
-        R0 = R0 & 0;
-        R3 = ~R2;
-        R3++; //R3 = -R2
-    BACK:
-        R3 = R3 << 1;
-        set_cc(R4 = R1 + R3);
-        if(CC == POS) goto BACK;
-        if(CC == ZRO) goto FOUND;
-        R3 = R3 >> 1 | 0x8000; //RSHFA
-    NEXT:
-        R0 = R0 << 1;
-        set_cc(R4 = R1 + R3); //instruction clone
-        if (CC == NEG) goto SKIP;
-    FOUND:
-        R0 = R0 + 1;
-        R1 = R4 + 0;
-    SKIP:
-        set_cc(R4 = R3 + R2);
-        if(CC == ZRO) goto END;
-        R3 = R3 >> 1 | 0x8000; //RSHFA
-        goto NEXT;
-    END:
+        AND(R0, R0, 0);
+        ADD(R2, R2, 0);
+        BRz(ERROR);
+        NOT(R3, R2);
+        ADD(R3, R3, 1);
+        SHIFT:
+            LSHF(R3, R3, 1);
+            ADD(R4, R1, R3);
+            BRp(SHIFT);
+            BRz(FOUND);
+            RSHFA(R3, R3, 1);
+            NEXT:
+                LSHF(R0, R0, 1);
+                ADD(R4, R1, R3);
+                BRn(SKIP);
+                FOUND:
+                    ADD(R0, R0, 1);
+                    ADD(R1, R4, 0);
+                    SKIP:
+                    ADD(R4, R3, R2);
+                    BRz(END);
+                    RSHFA(R3, R3, 1);
+                    BR(NEXT);
+        ERROR:
+        ADD(R0, R2, -1);
+        END:
+
         EXPECT_EQ(N/D, R0);
         EXPECT_EQ(N%D, R1);
     }
