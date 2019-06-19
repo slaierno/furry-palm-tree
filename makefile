@@ -12,7 +12,7 @@ TEST_OBJ = main_test.o \
 		   memory.o
 TEST_PROG = main_test.exe
 TEST_LDFLAGS = -lgtest
-CPPFLAGS = -pthread
+CPPFLAGS = -pthread -std=c++17 -Wall -Werror
 TEST_CPPFLAGS = -g $(CPPFLAGS)
 
 %.o: %.cpp $(DEPS)
@@ -25,9 +25,9 @@ test: $(TEST_OBJ)
 release: $(OBJ)
 	$(CC) -g -o $(PROG) $^
 
-playground: 
+playground:
 	$(CC) -g -O0 -o playground.exe playground.cpp $(CPPFLAGS) $(TEST_LDFLAGS)
 	./playground.exe
 
-clean: 
+clean:
 	rm -f ./*.o
