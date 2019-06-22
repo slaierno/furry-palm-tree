@@ -22,7 +22,7 @@ TokenList tokenize(const std::string& line_ref) {
     TokenList token_list;
 
     /* Remove comments */
-    line = line.substr(std::min(0UL, line.find_first_not_of(" ,\n")), 
+    line = line.substr(std::min(0UL, line.find_first_not_of(" ,\n\t")), 
                                       line.find_first_of(";"));
 
     /* Extract tokens */
@@ -30,8 +30,8 @@ TokenList tokenize(const std::string& line_ref) {
     /* Yes, I had fun. */
     auto parse = [&] (const auto& self) -> TokenList& {
         return line.length() ? (
-                token_list.push_back(line.substr(0, line.find_first_of(" ,\n"))), 
-                line.erase(0, line.find_first_not_of(" ,\n", line.find_first_of(" ,\n"))), 
+                token_list.push_back(line.substr(0, line.find_first_of(" ,\n\t"))), 
+                line.erase(0, line.find_first_not_of(" ,\n\t", line.find_first_of(" ,\n\t"))), 
                 line.length() ? 
                     self(self) : 
                     token_list

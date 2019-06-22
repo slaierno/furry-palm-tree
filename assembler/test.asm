@@ -1,99 +1,69 @@
-.orig x3000
-	LD  R1 ARG  ;R1:=8
-	JSR FAC ;R0:=FAC(R1)
-	JSR PRINT_DECIMAL
-	LEA R0 BYE
-	PUTS
-	HALT
+.orig #x3000
+ARG1 .FILL	#120
+ARG2 .FILL  #18
 
-	
-FAC_RET_REG .blkw #1
-FAC_ARG     .blkw #1
-FAC
-	ST  R7 FAC_RET_REG ;save return register
-	ST  R1 FAC_ARG ;save argument
-	ADD R3 R1 #-1 ;R3 is counter-1
-FAC_LOOP
-	BRz FAC_RETURN ;return for 
-	ADD R2 R3 #0  ;R2:=R3
-	JSR MUL ;R0:=MUL(R1,R2), consumes R2
-	ADD R1 R0 #0 ;R1:=R0
-	ADD R3 R3 #-1 ;counter--
-	BR  FAC_LOOP
-FAC_RETURN
-	LD  R7 FAC_RET_REG ;restore return register
-	LD  R1 FAC_ARG ;restore argument
-	RET ;return to R6
+LD	R1,	ARG1
+LD	R2,	ARG2
+JSR DIV ;R0=18 R1=12
+ADD R3 R0 #0
+JSR MUL
+JSR PRINT_DECIMAL ;Should print 18*12 (216)
 
-	
-MUL ;R0:=R1*R2
-	AND R0 R0 #0 ;R0:=0
-	ADD R2 R2 #0 ;R3:=R2, CC=sign(R2)
-MUL_LOOP
-	BRz MUL_RETURN ;if(CC = 0) return
-	ADD R0 R0 R1 ;R0 += R1
-	ADD R2 R2 #-1
-	BR  MUL_LOOP
-MUL_RETURN
-	RET
 
-	
-DIV ;R0:=R1/R2
-	NOT R2 R2
-	ADD R2 R2 #1 ;R2:=-R2
-	AND R0 R0 #0
-DIV_LOOP
-	ADD R0 R0 #1
-	ADD R1 R1 R2 ;R1-=R2
-	BRn DIV_REVERT
-	BRz DIV_RETURN
-	BRp DIV_LOOP
-DIV_REVERT
-	ADD R0 R0 #-1
-	NOT R2 R2
-	ADD R2 R2 #1 ;R2:=-R2
-	ADD R1 R1 R2
-DIV_RETURN
-	RET
-	
-	
-;MUL10 ;R0:=R1*10
-;	LSHF R0 R1 #3 ;R0:=R1*8
-;	ADD  R0 R0 R1
-;	ADD  R0 R0 R1
-;	RET
-;	
-;MUL100 ;R0=R1*100, uses R2
-;	LSHF  R0 R1 #6 ;R0:=R1*64
-;	LSHF  R2 R1 #5 ;R1:=R1*32
-;	ADD   R0 R0 R2 ;R0:=R1*96
-;	LSHF  R2 R1 #2 ;R2:=R1*4
-;	ADD   R0 R0 R2 ;R0:=R1*100
-;	RET
-;	
-;MUL1000 ;R0=R1*1000, uses R2
-;	LSHF  R0 R1 #4 ;R0:=R1*16
-;	LSHF  R2 R1 #3 ;R2:=R1*8
-;	ADD   R2 R2 R0 ;R2:=R1*24
-;	NOT   R2 R2    ;R2:=~(R1*24)
-;	ADD   R2 R2 #1 ;R2:=-R1*24
-;	LSHF  R0 R1 #10;R0:=R1*1024
-;	ADD   R0 R0 R2 ;R0:=R0+R2 = R1*1000
-;	RET
-;	
-;MUL10000 ;R0=R1*1000, uses R2
-;	LSHF  R0 R1 #4 ;R0:=R1*16
-;	LSHF  R2 R1 #8 ;R2:=R1*256
-;	ADD   R0 R0 R2 ;R0:=R1*272
-;	LSHF  R2 R1 #9 ;R2:=R1*512
-;	ADD   R0 R0 R2 ;R0:=R1*784
-;	LSHF  R2 R1 #10;R2:=R1*1024
-;	ADD   R0 R0 R2 ;R0:=R1*1808
-;	LSHF  R2 R1 #13;R2:=R1*8192
-;	ADD   R0 R0 R2 ;R0:=R1*1000
-;	RET
-	
-	
+;Performs R0:=R1*R2
+;No overflow managed
+;Works with negative numbers
+;Consumes both R1 and R2
+;Uses R3
+MUL
+  AND R0 R0 #0
+  ADD R2 R2 #0
+  LOOP
+    BRz DONE
+    AND R3 R2 #x1
+    BRz SKIP
+      ADD R0 R0 R1
+    SKIP
+    LSHF R1 R1 #1
+    RSHFL R2 R2 #1
+    BR LOOP
+  DONE
+  RET
+
+;Performs R0:=R1/R2 and R1:=R1%R2
+;If R2=0, set R0:=0xFFFF and return
+;Does it work with negatives?
+;Consumes both R1 and R2
+;Uses R3 and R4
+DIV
+  AND R0 R0 & 0
+  ADD R2 R2 #0
+  BRz ERROR
+  NOT R3 R2
+  ADD R3 R3 #1
+  SHIFT
+    LSHF R3 R3 #1
+    ADD R4 R1 R3
+    BRp SHIFT
+    BRz FOUND
+    RSHFA R3 R3 1
+    NEXT
+      LSHF R0 R0 #1
+      ADD R4 R1 R3
+      BRn SKIP
+      FOUND
+        ADD R0 R0 1
+        ADD R1 R4 0
+        SKIP
+        ADD R4 R3 R2
+        BRz DONE
+        RSHFA R3 R3 #1
+        BR NEXT
+  ERROR
+  ADD R0 R2 #-1
+  DONE
+  RET
+
 STACK_REG .blkw #1
 PRINT_DECIMAL
 	ST R7 STACK_REG
