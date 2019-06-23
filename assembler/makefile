@@ -20,12 +20,14 @@ TEST_LDFLAGS = -lgtest
 %.o: %.cpp $(ASM_DEPS)
 	$(CC) $(ASM_CPPFLAGS) -c -o $@ $<
 
-all: $(ASM_OBJ)
+release: $(ASM_OBJ)
 	$(CC) -o $(ASM_PROG) $(ASM_CPPFLAGS) $^
 
 test: $(TEST_OBJ)
 	$(CC) -o $(TEST_PROG) $(ASM_CPPFLAGS) $^ $(TEST_LDFLAGS)
 	./$(TEST_PROG)
+
+all: release test
 
 clean:
 	rm -f *.o

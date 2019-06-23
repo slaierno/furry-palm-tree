@@ -25,6 +25,8 @@ test: $(TEST_OBJ)
 release: $(OBJ)
 	$(CC) -g -o $(PROG) $^
 
+all: test release
+
 playground:
 	$(CC) -g -O0 -o playground.exe playground.cpp $(CPPFLAGS) $(TEST_LDFLAGS)
 	./playground.exe
