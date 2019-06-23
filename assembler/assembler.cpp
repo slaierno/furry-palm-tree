@@ -3,9 +3,22 @@
 #include "Token.hpp"
 #include "utils.hpp"
 
-void writeMachineCode(std::ofstream& outfile, uint16_t code) {
-    if(code == 0) return; //NOOP
-    uint16_t big_endian = code >> 8 | code << 8;
+void writeMachineCode(std::ofstream& outfile, std::string line) {
+    const uint16_t prev_address = inst_address;
+    const uint16_t code = assembleLine(line);
+    /* Compute the difference between current and previous address.
+     * Necessary when .blkw instruction needs to write multiple words
+     * at once. It is also useful to check for a NOOP more consistently.
+     */
+    const uint16_t delta_addr = inst_address - prev_address;
+    if(0 == delta_addr) 
+        return; //NOOP
+    const uint16_t big_endian = code >> 8 | code << 8;
+    outfile.write(reinterpret_cast<char const *>(&big_endian), 2 * delta_addr);
+}
+
+void writeAddress(std::ofstream&outfile, const uint16_t address) {
+    uint16_t big_endian = address >> 8 | address << 8;
     outfile.write(reinterpret_cast<char const *>(&big_endian), 2);
 }
 
@@ -30,12 +43,12 @@ int main(int argc, const char* argv[])
             while (getline(asm_file, line)) {
                 validateLine(line);
             }
-            writeMachineCode(outfile, start_address);
+            writeAddress(outfile, start_address);
             inst_address = start_address;
             asm_file.clear();
             asm_file.seekg(std::ios::beg);
             while (getline(asm_file, line)) {
-                writeMachineCode(outfile, assembleLine(line));
+                writeMachineCode(outfile, line);
             }
             outfile.close();
             asm_file.close();
