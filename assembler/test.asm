@@ -8,6 +8,7 @@ JSR DIV ;R0=18 R1=12
 ADD R3 R0 #0
 JSR MUL
 JSR PRINT_DECIMAL ;Should print 18*12 (216)
+HALT
 
 
 ;Performs R0:=R1*R2
@@ -18,16 +19,16 @@ JSR PRINT_DECIMAL ;Should print 18*12 (216)
 MUL
   AND R0 R0 #0
   ADD R2 R2 #0
-  LOOP
-    BRz DONE
+  MUL_LOOP
+    BRz MUL_DONE
     AND R3 R2 #x1
-    BRz SKIP
+    BRz MUL_SKIP
       ADD R0 R0 R1
-    SKIP
+    MUL_SKIP
     LSHF R1 R1 #1
     RSHFL R2 R2 #1
-    BR LOOP
-  DONE
+    BR MUL_LOOP
+  MUL_DONE
   RET
 
 ;Performs R0:=R1/R2 and R1:=R1%R2
@@ -36,33 +37,42 @@ MUL
 ;Consumes both R1 and R2
 ;Uses R3 and R4
 DIV
-  AND R0 R0 & 0
+  AND R0 R0 #0
   ADD R2 R2 #0
-  BRz ERROR
+  BRz DIV_ERROR
   NOT R3 R2
   ADD R3 R3 #1
-  SHIFT
+  DIV_SHIFT
     LSHF R3 R3 #1
     ADD R4 R1 R3
-    BRp SHIFT
-    BRz FOUND
-    RSHFA R3 R3 1
-    NEXT
+    BRp DIV_SHIFT
+    BRz DIV_FOUND
+    RSHFA R3 R3 #1
+    DIV_NEXT
       LSHF R0 R0 #1
       ADD R4 R1 R3
-      BRn SKIP
-      FOUND
-        ADD R0 R0 1
-        ADD R1 R4 0
-        SKIP
+      BRn DIV_SKIP
+      DIV_FOUND
+        ADD R0 R0 #1
+        ADD R1 R4 #0
+        DIV_SKIP
         ADD R4 R3 R2
-        BRz DONE
+        BRz DIV_DONE
         RSHFA R3 R3 #1
-        BR NEXT
-  ERROR
+        BR DIV_NEXT
+  DIV_ERROR
   ADD R0 R2 #-1
-  DONE
+  DIV_DONE
   RET
+
+RESULT .blkw #1
+OUT_STR .blkw #7
+ARG    .fill #8
+N100   .fill #100
+N1000  .fill #1000
+N10000 .fill #10000
+ASCII_BASE .fill #48
+BYE    .stringz "Halting..."
 
 STACK_REG .blkw #1
 PRINT_DECIMAL
@@ -97,13 +107,4 @@ PRINT_DECIMAL
 	LD R7 STACK_REG
 	RET
 	
-	
-RESULT .blkw #1
-OUT_STR .blkw #7
-ARG    .fill #8
-N100   .fill #100
-N1000  .fill #1000
-N10000 .fill #10000
-ASCII_BASE .fill #48
-BYE    .stringz "Halting..."
 .end

@@ -16,6 +16,10 @@ protected:
 class TestToken : public TestCommon {};
 TEST_F(TestToken, Empty) {
     EXPECT_EQ(0, tokenize("").size());
+    EXPECT_EQ(0, tokenize(",").size());
+    EXPECT_EQ(0, tokenize("\n").size());
+    EXPECT_EQ(0, tokenize("\r").size());
+    EXPECT_EQ(0, tokenize("\t").size());
     EXPECT_EQ(0, tokenize(";adklfj").size());
 }
 
