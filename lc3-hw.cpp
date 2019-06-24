@@ -120,9 +120,8 @@ template <const unsigned op> void exec(uint16_t instr) {
     }
     if(0x6EEF & opbit) r0 = (instr >> 9) & 0x7; //also work as COND for BR
     if(0x32F2 & opbit) r1 = (instr >> 6) & 0x7;
-    if(0x0200 & opbit) reg[r0] = ~reg[r1]; //NOT
     if(0x1000 & opbit) reg[R_PC] = reg[r1]; //JMP
-    if(0x0022 & opbit) { //ADD & AND
+    if(0x0222 & opbit) { //ADD, AND, XOR
                         op2 = ((instr >> 5) & 1) ? //imm_flag
                             sign_extend(instr & 0x1F, 5): //op2 = imm5
                             op2 = reg[(instr & 0x7)]; //op2 = reg[r2]
@@ -153,6 +152,7 @@ template <const unsigned op> void exec(uint16_t instr) {
     }
     if(0x0002 & opbit) reg[r0] = reg[r1] + op2; //ADD
     if(0x0020 & opbit) reg[r0] = reg[r1] & op2; //AND
+    if(0x0200 & opbit) reg[r0] = reg[r1] ^ op2; //NOT
     if(0x4C0D & opbit) offset = reg[R_PC] + sign_extend(instr & 0x1FF, 9); //offset = PC+PCoffset9
     if(0x00C0 & opbit) offset = reg[r1] + sign_extend(instr & 0x3F, 6); //offset = R1+Offset6
     if(0x0001 & opbit) if (r0 & reg[R_COND]) reg[R_PC] = offset; //BR

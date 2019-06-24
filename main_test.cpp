@@ -81,10 +81,35 @@ TEST_F(TestOperand, OP_NOT) {
     op = OP_NOT;
     reg[r0] = 0;
     reg[r1] = 0b1101011101111010;
-    instr = op << 12 | r0 << 9 | r1 << 6;
+    instr = op << 12 | r0 << 9 | r1 << 6 | 0x3F;
     op_table[op](instr);
     EXPECT_EQ((uint16_t)~reg[r1], (uint16_t)reg[r0]);
     EXPECT_EQ(FL_POS, reg[R_COND]);
+}
+
+TEST_F(TestOperand, OP_XORRegister) {
+    op = OP_XOR;
+    reg[r0] = 0;
+    reg[r1] = 0b1101011101111010;
+    reg[r2] = 0b1011000101101011;
+    instr = op << 12 | r0 << 9 | r1 << 6 | r2;
+    op_table[op](instr);
+    EXPECT_NE((reg[r1] ^ r2     ), reg[r0]);
+    EXPECT_EQ((reg[r1] ^ reg[r2]), reg[r0]);
+    EXPECT_EQ(FL_POS, reg[R_COND]);
+}
+
+TEST_F(TestOperand, OP_XORimm5) {
+    op = OP_XOR;
+    imm5 = 0xFFF2; //-2
+    reg[r0] = 0;
+    reg[r1]         = 0b0101011101111010;
+    reg[imm5 & 0x7] = 0b1011000101101011;
+    instr = op << 12 | r0 << 9 | r1 << 6 | 1 << 5 | (imm5 & 0x1F);
+    op_table[op](instr);
+    EXPECT_NE((reg[r1] ^ reg[imm5 & 0x7]), reg[r0]);
+    EXPECT_EQ((reg[r1] ^ imm5   ), reg[r0]);
+    EXPECT_EQ(FL_NEG, reg[R_COND]);
 }
 
 TEST_F(TestOperand, OP_BR) {

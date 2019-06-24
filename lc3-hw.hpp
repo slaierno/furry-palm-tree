@@ -69,7 +69,7 @@ enum {
     OP_LDR,    /* load register */
     OP_STR,    /* store register */
     OP_RTI,    /* unused */
-    OP_NOT,    /* bitwise not */
+    OP_XOR,    /* bitwise xor */
     OP_LDI,    /* load indirect */
     OP_STI,    /* store indirect */
     OP_JMP,    /* jump */
@@ -80,6 +80,8 @@ enum {
 
 /* LC-3b extension where RES opcode is used for bit shift */
 #define OP_SHF OP_RES
+/* LC-3b extension where NOT is a special case of XOR */
+#define OP_NOT OP_XOR
 
 /*
  * LSH DR, SR:
