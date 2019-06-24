@@ -83,50 +83,6 @@ enum {
 /* LC-3b extension where NOT is a special case of XOR */
 #define OP_NOT OP_XOR
 
-/*
- * LSH DR, SR:
- * * ADD DR, SR, SR
- * 
- * NEG DR, SR1
- * * NOT DR, SR1
- * * ADD DR, DR, #1
- * 
- * SUB DR, SR1, SR2:
- * * NOT DR, SR2
- * * ADD DR, DR, #1
- * * ADD DR, DR, SR1
- * ----
- * * NEG DR, SR2
- * * ADD DR, SR1, DR
- * 
- * RSH DR, SR: ;REQUIRES R2 and R3 as temp registers
- * * AND R2, R2, #0
- * * ADD R2, R2, #1
- * * LOOP
- * * ADD R3, R2, #0 ; R3: output mask
- * * ADD R2, R2, R2 ; R2: input mask
- * * BRz END
- * * AND R4, SR, R2 ; R4: temp register
- * * BRz LOOP
- * * ADD DR, DR, R3
- * * BR LOOP
- * * END
- * 
- * XOR DR, SR1, SR2 ;Using A^B=(A+B)-2*(A&B)
- * * AND DR, SR1, SR2     ;DR :=                      (SR1 & SR2)
- * * NOT DR, DR           ;DR :=~DR                  ~(SR1 & SR2)
- * * ADD DR, DR, #1       ;DR :=-DR       =          -(SR1 & SR2)
- * * ADD DR, DR, DR       ;DR := DR + DR  =       - 2*(SR1 & SR2)
- * * ADD DR, DR, SR1      ;DR := DR + SR1 = A     - 2*(SR1 & SR2)
- * * ADD DR, DR, SR2      ;DR := DR + SR2 = A + B - 2*(SR1 & SR2)
- * ----
- * * AND DR, SR1, SR2
- * * NEG DR, DR
- * * ADD DR, DR
- * * ADD DR, DR, SR1
- * * ADD DR, DR, SR2
- */
-
 /* CONDITION FLAGS */
 enum {
     FL_POS = 0b001, /* P */

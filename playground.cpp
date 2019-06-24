@@ -105,6 +105,12 @@ TEST(Operations, LongDivision) {
     }
 }
 
+TEST(Logic, XOR) {
+    for(uint16_t i = 0; i < 0x100; i++)
+        for(uint16_t j = 0; j < 0x100; j++)
+            ASSERT_EQ(i|j, ((i&j)^i)^j);
+}
+
 int main(int argc, char* argv[])
 {
     ::testing::InitGoogleTest(&argc, argv);
