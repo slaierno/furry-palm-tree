@@ -355,10 +355,10 @@ TEST_F(TestInstruction, NOT) {
     );
 }
 
-TEST_F(TestInstruction, ADD_AND) {
+TEST_F(TestInstruction, ADD_AND_XOR) {
     #define o(N) {#N, OP::N, opEnumToOpcodeMap[OP::N]}
     const std::vector<std::tuple<std::string, OP::Type, uint16_t>> inst_list {
-        o(ADD), o(AND)
+        o(ADD), o(AND), o(XOR)
     };
     #undef o
     for(auto const& inst : inst_list) {

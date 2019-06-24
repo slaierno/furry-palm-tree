@@ -30,7 +30,7 @@ namespace OP {
         RET , RTI  , JSR , BR  , BRn, BRz , BRp , BRnz , BRnp ,
         BRzp, BRnzp, TRAP, JSRR, JMP, LD  , ST  , LDI  , STI  , 
         LEA , NOT  , ADD , AND , LDR, STR , LSHF, RSHFL, RSHFA,
-        COUNT //27
+        XOR , COUNT //29
     };
 }
 
@@ -68,6 +68,7 @@ const std::map<std::string, OP::Type> stringToOpEnumMap {
     o(RET) , o(RTI)  , o(JSR) , o(BR)  , o(BRn), o(BRz), o(BRp) , o(BRnz) , o(BRnp) , 
     o(BRzp), o(BRnzp), o(TRAP), o(JSRR), o(JMP), o(LD) , o(ST)  , o(LDI)  , o(STI)  , 
     o(LEA) , o(NOT)  , o(ADD) , o(AND) , o(LDR), o(STR), o(LSHF), o(RSHFL), o(RSHFA),
+    o(XOR)
 };
 #undef o
 
@@ -77,6 +78,7 @@ const std::array<uint16_t, OP::COUNT> opEnumToOpcodeMap {
     o(JMP), o(RTI), o(JSR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR),
     o(BR) , o(BR) , o(TRAP), o(JSR), o(JMP), o(LD) , o(ST) , o(LDI), o(STI), 
     o(LEA), o(NOT), o(ADD) , o(AND), o(LDR), o(STR), o(RES), o(RES), o(RES),
+    o(XOR)
 };
 #undef o
 
@@ -138,6 +140,7 @@ const std::multimap<OP::Type, const std::vector<enum TokenType>> validInstructio
     {OP::LDR, Reg_Reg_Hex}  , {OP::STR, Reg_Reg_Num}  , {OP::STR, Reg_Reg_Hex},
     {OP::LSHF, Reg_Reg_Num} , {OP::LSHF, Reg_Reg_Hex} , {OP::RSHFL, Reg_Reg_Num},
     {OP::RSHFL, Reg_Reg_Hex}, {OP::RSHFA, Reg_Reg_Num}, {OP::RSHFA, Reg_Reg_Hex},
+    {OP::XOR, Reg_Reg_Reg}  , {OP::XOR, Reg_Reg_Num}  , {OP::XOR, Reg_Reg_Hex}
 };
 
 /*********************************/

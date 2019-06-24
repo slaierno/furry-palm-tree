@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <variant>
+#include <deque>
 #include "commons.hpp"
 
 using TokenValue = std::variant<
@@ -64,4 +65,4 @@ public:
     std::string DebugString() const { return "{ TokenType::" + getTypeString() + ", " + getTokenString() + " }"; }
 };
 
-using TokenList = std::vector<Token>;
+using TokenList = std::deque<Token>;
