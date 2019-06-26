@@ -60,6 +60,203 @@ template <const int N> void checkBitRangeUnsigned(Token const& token) {
     }
 };
 
+void validationStateEmpty(TokenList tokens) {
+    if(!tokens.empty) {
+        //error
+        return;
+    }
+}
+
+template<uint16_t upper = 0xFFFF, uint16_t lower = 0x0000>
+void validationStateNumber(TokenList tokens) {
+    if(tokens.empty()) {
+        //error
+        return;
+    }
+    switch(tokens.front().getType()) {
+    case TokenType::Number:
+    case TokenType::HexNumber:
+    {
+        uint16_t number = tokens.front().get<int>();
+        if(number < lower || number > upper) {
+            //error
+            return;
+        }
+        tokens.pop_front();
+        validationStateEmpty(tokens);
+        break;
+    }
+    default:
+        //error
+        break;
+    }
+}
+
+void validationStateString(TokenList tokens) {
+    if(tokens.empty()) {
+        //error
+        return;
+    }
+    switch(tokens.front().getType()) {
+    case TokenType::String:
+    {
+        auto str = tokens.front().get<std::string>();
+        //TODO check string validity
+        tokens.pop_front();
+        validationStateEmpty(tokens);
+        break;
+    }
+    default:
+        //error
+        break;
+    }
+}
+
+void validationStatePseudoOp(TokenList tokens) {
+    auto pop = tokens.front().get<POP::Type>();
+    tokens.pop_front();
+    switch(pop) {
+    case POP::END:
+        validationStateEmpty(tokens);
+        break;
+    case POP::STRINGZ:
+        validationStateString(tokens);
+        break;
+    case POP::ORIG:
+        validationStateNumber<0xFDFF, 0x3000>(tokens);
+        break;
+    case POP::BLKW:
+        validationStateNumber(tokens);
+        break;
+    case POP::FILL:
+        validationStateNumber(tokens);
+        break;
+    default:
+        //error
+        break;
+    }
+}
+
+void convertToImmediate(OP::Type& inst, TokenList const& tokens) {
+    if((3 == tokens.size()) //if not, let the validator fail by its own
+    && (tokens.back().isNumber())) { //if it's not a register either, let the validator fail by its own
+        switch(inst) {
+        case OP::ADD:
+            inst = OP::ADDi;
+            break;
+        case OP::AND:
+            inst = OP::ANDi;
+            break;
+        case OP::XOR:
+            inst = OP::XORi;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void validationStateInstruction(TokenList tokens) {
+    auto inst = tokens.front().get<OP::Type>();
+    tokens.pop_front();
+
+    //preprocess to understand if ADD,AND and XOR accept immediate values
+    convertToImmediate(inst, tokens);
+
+    switch(inst) {
+    case OP::RET:
+    case OP::RTI:
+        validationStateEmpty(tokens);
+        break;
+    case OP::BR:
+    case OP::BRn:
+    case OP::BRz:
+    case OP::BRp:
+    case OP::BRnz:
+    case OP::BRnp:
+    case OP::BRzp:
+    case OP::BRnzp:
+    case OP::JSR:
+        // stateLabel
+        break;
+    case OP::LD:
+    case OP::LDI:
+    case OP::ST:
+    case OP::STI:
+    case OP::LEA:
+        // stateReg
+        // stateLabel
+    case OP::ADDi:
+    case OP::ANDi:
+    case OP::XORi:
+        //stateReg
+        //stateReg
+        validationStateNumber<0x1F>(tokens);
+        break;
+    case OP::LDR:
+    case OP::STR:
+        //stateReg
+        //stateReg
+        validationStateNumber<0x3F>(tokens);
+        break;
+    case OP::LSHF:
+    case OP::RSHFA:
+    case OP::RSHFL:
+        //stateReg
+        //stateReg
+        validationStateNumber<0xF>(tokens);
+        break;
+    case OP::ADD:
+    case OP::AND:
+    case OP::XOR:
+        //stateReg
+        //stateReg
+        //stateReg
+        validationStateEmpty(tokens);
+    default:
+        //error
+        break;
+    }
+}
+
+void validationStateLabelStart(TokenList tokens) {
+    if(tokens.empty()) {
+        //noop
+        return;
+    }
+    switch(tokens.front().getType()) {
+    case TokenType::PseudoOp:
+        validationStatePseudoOp(tokens);
+        break;
+    case TokenType::Trap:
+        tokens.pop_front();
+        validationStateEmpty(tokens);
+    case TokenType::Instruction:
+        //call stateInst
+        break;
+    default:
+        //error
+        break;
+    }
+}
+
+void validationStepFSM(TokenList tokens) {
+    if(tokens.empty()) {
+        //noop
+        return;
+    }
+    switch(tokens.front().getType()) {
+    case TokenType::Label:
+        //set label
+        tokens.pop_front();
+        validationStateLabelStart(tokens);
+        break;
+    default:
+        //call stateInst
+        break;
+    }
+}
+
 void validationStep(TokenList tokens) {
     switch(tokens[0].getType()) {
     case TokenType::Instruction: {

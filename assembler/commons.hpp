@@ -30,7 +30,8 @@ namespace OP {
         RET , RTI  , JSR , BR  , BRn, BRz , BRp , BRnz , BRnp ,
         BRzp, BRnzp, TRAP, JSRR, JMP, LD  , ST  , LDI  , STI  , 
         LEA , NOT  , ADD , AND , LDR, STR , LSHF, RSHFL, RSHFA,
-        XOR , COUNT //29
+        XOR , COUNT /* 29 */, 
+        ADDi , ANDi, XORi, //used for internal logic only
     };
 }
 
