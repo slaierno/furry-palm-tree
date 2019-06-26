@@ -24,6 +24,7 @@ namespace asm_error {
     };
 
     struct invalid_format : public generic_error {
+        invalid_format() : generic_error("ERROR: Invalid instruction format") {};
         invalid_format(TokenList const& tokens) : generic_error(make_error_str(tokens)) {};
     private:
         static const std::string make_error_str(TokenList const& tokens) {

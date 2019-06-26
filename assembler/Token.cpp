@@ -69,11 +69,9 @@ int16_t Token::getNumValue(unsigned int n) const {
     }
     case TokenType::Label: {
         const std::string label_str = get<std::string>();
-        auto it = label_map.find(label_str);
-        if(it == label_map.end()) {
+        uint16_t label_address = label_map[label_str];
+        if(0 == label_address)
             throw asm_error::label_not_found(label_str);
-        }
-        uint16_t label_address = it->second;
         uint16_t mask = 0xFFFF >> (16 - n);
         return (int16_t)((label_address - inst_address) & mask);
     }

@@ -4,12 +4,14 @@
 #include "Token.hpp"
 #include "utils.hpp"
 #include "errors.hpp"
+#include "validationSM.hpp"
 
 class TestCommon : public ::testing::Test {
 protected:
-    TestCommon() {inst_address = start_address;};
-    ~TestCommon() {
+    TestCommon() {
+        inst_address = start_address;
         label_map.clear();
+        resetVSM();
     };
 };
 
@@ -42,7 +44,7 @@ TEST_F(TestToken, GarbageAndComments) {
     EXPECT_EQ(-172,        tokens[4].get<int>());
     EXPECT_EQ(REG::R1,     tokens[5].get<REG::Type>());
     
-    EXPECT_THROW(validationStep(tokens), asm_error::generic_error);
+    EXPECT_THROW(validateLineFSM<false>(tokens), asm_error::generic_error);
 }
 
 TEST_F(TestToken, PseudoOP) {
@@ -59,7 +61,7 @@ TEST_F(TestToken, PseudoOP) {
     EXPECT_EQ(POP::STRINGZ, tokens[3].get<POP::Type>());
     EXPECT_EQ(POP::END    , tokens[4].get<POP::Type>());
     
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_pseudo_op);
+    EXPECT_THROW(validateLineFSM<false>(tokens), asm_error::invalid_pseudo_op);
 }
 
 TEST_F(TestToken, Trap) {
@@ -77,7 +79,7 @@ TEST_F(TestToken, Trap) {
     EXPECT_EQ(TRAP::PUTSP, tokens[4].get<TRAP::Type>());
     EXPECT_EQ(TRAP::HALT , tokens[5].get<TRAP::Type>());
     
-    EXPECT_THROW(validationStep(tokens), asm_error::invalid_trap_call);
+    EXPECT_THROW(validateLineFSM<false>(tokens), asm_error::invalid_trap_call);
 }
 
 TEST_F(TestToken, BR) {
@@ -109,7 +111,7 @@ TEST_F(TestToken, BR) {
         EXPECT_EQ(cflags,                 tokens[0].getCondFlags());
         EXPECT_EQ("PIPPO",                tokens[1].get<std::string>());
 
-        EXPECT_NO_THROW(validationStep(tokens));
+        EXPECT_NO_THROW(validateLineFSM<false>(tokens));
     }
 }
 
@@ -118,7 +120,7 @@ public:
     static void testGoodInstruction(const std::string& inst_str, const TokenList& tokens_check, uint16_t inst) {
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens) << inst_str;
-        EXPECT_NO_THROW(validationStep(tokens)) << inst_str;
+        EXPECT_NO_THROW(validateLineFSM<false>(tokens)) << inst_str;
         auto temp_inst_copy = inst_str.substr();
         EXPECT_EQ(inst, assembleLine(temp_inst_copy)) << inst_str;
         inst_address--;
@@ -127,13 +129,13 @@ public:
     static void testBadInstruction(const std::string& inst_str, const TokenList& tokens_check) {
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens) << inst_str;
-        EXPECT_THROW(validationStep(tokens), ErrorType) << inst_str;
+        EXPECT_THROW(validateLineFSM<false>(tokens), ErrorType) << inst_str;
     }
     template <typename ErrorType>
     static void testBadLabel(const std::string& inst_str, const TokenList& tokens_check) {
         TokenList tokens = tokenize(inst_str);
         EXPECT_EQ(tokens_check, tokens) << inst_str;
-        EXPECT_NO_THROW(validationStep(tokens)) << inst_str;
+        EXPECT_NO_THROW(validateLineFSM<false>(tokens)) << inst_str;
         EXPECT_THROW(inst_table[tokens[0].get<OP::Type>()](tokens), ErrorType) << inst_str;
     }
 };
@@ -152,8 +154,8 @@ TEST_F(TestInstruction, RTI) {
 }
 
 TEST_F(TestInstruction, JSR) {
-    label_map.insert(std::pair("PIPPO", 0x3010));
-    label_map.insert(std::pair("PLUTO", 0x2FF0));
+    label_map.emplace("PIPPO", 0x3010);
+    label_map.emplace("PLUTO", 0x2FF0);
 
     /* TEST INSTRUCTION */
     testGoodInstruction(
@@ -249,13 +251,7 @@ TEST_F(TestInstruction, TRAP) {
          {TokenType::HexNumber  , 0x0023}}
     );
 
-    testBadInstruction<asm_error::invalid_format>(
-        "TRAP #35\n",
-        {{TokenType::Instruction, OP::TRAP},
-         {TokenType::Number     , 35}}
-    );
-
-    testBadInstruction<asm_error::trap_inst_disabled>(
+    testBadInstruction<asm_error::out_of_range_integer>(
         "TRAP #x-23\n",
         {{TokenType::Instruction, OP::TRAP},
          {TokenType::HexNumber  , -35}}
@@ -383,14 +379,6 @@ TEST_F(TestInstruction, ADD_AND_XOR) {
             std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | 5
         );
         testGoodInstruction(
-            std::get<0>(inst) + " R2 R3 #x15\n",
-            {{TokenType::Instruction, std::get<1>(inst)},
-            {TokenType::Register    , REG::R2},
-            {TokenType::Register    , REG::R3},
-            {TokenType::HexNumber   , 0x15}},
-            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | (-11 & 0x1F)
-        );
-        testGoodInstruction(
             std::get<0>(inst) + " R2 R3 #-16\n",
             {{TokenType::Instruction, std::get<1>(inst)},
             {TokenType::Register    , REG::R2},
@@ -398,14 +386,22 @@ TEST_F(TestInstruction, ADD_AND_XOR) {
             {TokenType::Number      , -16}},
             std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | 0x10
         );
-
-        /* TEST BAD INSTRUCTION */
-        testBadInstruction<asm_error::out_of_range_integer>(
+        testGoodInstruction(
             std::get<0>(inst) + " R2 R3 #x-F\n",
             {{TokenType::Instruction, std::get<1>(inst)},
             {TokenType::Register    , REG::R2},
             {TokenType::Register    , REG::R3},
-            {TokenType::HexNumber   , -15}}
+            {TokenType::HexNumber   , -15}},
+            std::get<2>(inst) << 12 | R_R2 << 9 | R_R3 << 6 | 1 << 5 | 0x11
+        );
+
+        /* TEST BAD INSTRUCTION */
+        testBadInstruction<asm_error::out_of_range_integer>(
+            std::get<0>(inst) + " R2 R3 #x15\n",
+            {{TokenType::Instruction, std::get<1>(inst)},
+            {TokenType::Register    , REG::R2},
+            {TokenType::Register    , REG::R3},
+            {TokenType::HexNumber   , 0x15}}
         );
         testBadInstruction<asm_error::out_of_range_integer>(
             std::get<0>(inst) + " R2 R3 #16\n",

@@ -10,7 +10,8 @@ extern uint16_t  inst_address;
 extern uint16_t start_address;
 extern std::map<std::string, uint16_t> label_map;
 
+void        updateInstructionAddress(unsigned int n = 1);
 TokenList   tokenize(const std::string& line);
-void        validationStep(TokenList tokens);
 void        validateLine(const std::string&);
+void        validateTokens(TokenList tokens);
 uint16_t    assembleLine(std::string&);

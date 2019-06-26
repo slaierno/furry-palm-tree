@@ -4,8 +4,10 @@ ASM_DEPS = \
 	utils.hpp \
 	commons.hpp \
 	errors.hpp \
+	validationSM.hpp \
 	../lc3-hw.hpp
 OBJS = Token.o \
+	   validationSM.o \
 	   utils.o
 ASM_OBJ = assembler.o \
 		  $(OBJS)
@@ -26,6 +28,10 @@ release: $(ASM_OBJ)
 test: $(TEST_OBJ)
 	$(CC) -o $(TEST_PROG) $(ASM_CPPFLAGS) $^ $(TEST_LDFLAGS)
 	./$(TEST_PROG)
+
+test_hard: $(TEST_OBJ)
+	$(CC) -o $(TEST_PROG) $(ASM_CPPFLAGS) $^ $(TEST_LDFLAGS)
+	./$(TEST_PROG) --gtest_break_on_failure
 
 all: release test
 
