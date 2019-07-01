@@ -5,6 +5,7 @@ ASM_DEPS = \
 	commons.hpp \
 	errors.hpp \
 	validationSM.hpp \
+	builder.hpp \
 	../lc3-hw.hpp
 OBJS = Token.o \
 	   validationSM.o \

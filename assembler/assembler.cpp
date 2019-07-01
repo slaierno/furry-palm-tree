@@ -4,17 +4,21 @@
 #include "utils.hpp"
 
 void writeMachineCode(std::ofstream& outfile, std::string line) {
+    auto writeBigEndian = [&outfile](uint16_t code = 0, size_t size = 1) constexpr {
+        const uint16_t big_endian = code >> 8 | code << 8;
+        outfile.write(reinterpret_cast<char const *>(&big_endian), 2 * size);
+    };
+    std::string ret_string = "";
+
     const uint16_t prev_address = inst_address;
-    const uint16_t code = assembleLine(line);
-    /* Compute the difference between current and previous address.
-     * Necessary when .blkw instruction needs to write multiple words
-     * at once. It is also useful to check for a NOOP more consistently.
-     */
-    const uint16_t delta_addr = inst_address - prev_address;
-    if(0 == delta_addr) 
-        return; //NOOP
-    const uint16_t big_endian = code >> 8 | code << 8;
-    outfile.write(reinterpret_cast<char const *>(&big_endian), 2 * delta_addr);
+    const uint16_t code = assembleLine(line, ret_string);
+    if (!ret_string.empty()) {
+        for(unsigned char const c : ret_string)
+            writeBigEndian(c);
+        writeBigEndian();
+    } else {
+        writeBigEndian(code, inst_address - prev_address);
+    }
 }
 
 void writeAddress(std::ofstream&outfile, const uint16_t address) {

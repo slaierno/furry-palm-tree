@@ -2,11 +2,13 @@
 #include "utils.hpp"
 #include "errors.hpp"
 #include "validationSM.hpp"
+#include "builder.hpp"
 
 //TODO inst_address should be somehow protected
 uint16_t  inst_address = 0;
 uint16_t start_address = 0x3000;
 std::map<std::string, uint16_t> label_map;
+const std::string del = " ,\n\r\t";
 
 void checkAddress(const uint16_t address) {
     if(address < userSpaceLower || address > userSpaceUpper)
@@ -17,29 +19,25 @@ void updateInstructionAddress(unsigned int n) {
     checkAddress(inst_address);
 }
 
-TokenList tokenize(const std::string& line_ref) {
-    std::string line = line_ref;
-    TokenList token_list;
-
-    const std::string del = " ,\n\r\t";
-
-    /* Remove comments and heading whitespaces */
+/* Remove comments and heading whitespaces */
+std::string cleanupLine(std::string line) {
     size_t first_valid = std::min(line.find_first_not_of(del), line.length());
-    line = line.substr(first_valid, line.find_first_of(";") - first_valid);
+    return line.substr(first_valid, line.find_first_of(";") - first_valid);
+}
 
+TokenList tokenize(std::string line) {
+    line = cleanupLine(line);
+    TokenList token_list; 
     /* Extract tokens */
     /* Dark magic happens here */
     /* Yes, I had fun. */
-    auto parse = [&token_list, &line, &del] (const auto& self) -> TokenList& {
-        return line.length() ? (
-                token_list.push_back(line.substr(0, line.find_first_of(del))), 
-                line.erase(0, line.find_first_not_of(del, line.find_first_of(del))), 
-                line.length() ? 
-                    self(self) : 
-                    token_list
-        ) : token_list;
-    };
-    return parse(parse);
+    auto l = [&] (const auto& self) -> int {
+        return (line.length() && (
+            token_list.push_back(line.substr(0, line.find_first_of(del))), 
+            (line.erase(0, line.find_first_not_of(del, line.find_first_of(del))).length() && self(self))
+        )); 
+    }; l(l);
+    return token_list;
 }
 
 void validateLine(const std::string& line) {
@@ -47,186 +45,11 @@ void validateLine(const std::string& line) {
     validateLineFSM(token_list);
 }
 
-/*
-    Common functions:
-
-        set_regs() := inst |= r1 << 9 | r2 << 6;
-        set_off(x) := x.getNumValue(off_bits);
-            CF  := tokens[0].getCondFlags();
-
-    Instruction op-per-op:
-
-        RTI, 
-            RETURN
-        RET, 
-            R2 = 7, 
-            set_regs()
-        JSR, 
-            R1 = 4, 
-            off_bits = 11, 
-            set_off(T[1]),
-            set_regs()
-        BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, 
-            R1 = CF, 
-            off_bits = 9, 
-            set_off(T[1]), 
-            set_regs()
-        TRAP,
-            off_bits = 16, 
-            set_off(T[1])
-        JSRR, JMP, 
-            R2 = T[1], 
-            set_regs()
-        LD, ST, LDI, STI, LEA,
-            R1 = T[1], 
-            off_bits = 9, 
-            set_off(T[2]),
-            set_regs(), 
-        NOT, 
-            R1 = T[1], 
-            R2 = T[2], 
-            set_regs(),
-            inst |= 0x3F
-        ADD, AND, 
-            off_bits = 5, 
-            R1 = T[1], 
-            R2 = T[2], 
-            if (T[3].type == num) 
-                inst |= 1 << 5,
-            set_off(T[3]), 
-            set_regs(),
-        LDR, STR, 
-            off_bits = 6, 
-            R1 = T[1], 
-            R2 = T[2], 
-            set_off(T[3])
-            set_regs()
-        LSHF, RSHFL, RSHFA, 
-            off_bits = 4, 
-            R1 = T[1], 
-            R2 = T[2], 
-            if(op == RSHFL)
-                inst |= 0b1 << 5
-            if(op == RSHFA)
-                inst |= 0b11 << 4
-            set_off(T[3]), 
-            set_regs()
-
-    Instruction groups:
-
-        off_bits = 16 -> TRAP
-        off_bits = 11 -> JSR
-        off_bits = 9  -> BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, LD, ST, LDI, STI, LEA
-        off_bist = 6  -> LDR, STR
-        off_bits = 5  -> ADD, AND, XOR
-        off_bits = 4  -> LSHF, RSHFL, RSHFA
-        R1 = T[1]     -> LD, ST, LDI, STI, LEA, NOT, XOR, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
-        R1 = CF       -> BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp
-        R1 = 4        -> JSR
-        R2 = 7        -> RET
-        R2 = T[2]     -> NOT, XOR, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
-        R2 = T[1]     -> JSRR, JMP
-        set_regs      -> RET, JSR, BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, JSRR, JMP, LD, ST, LDI, STI, LEA, XOR, NOT, ADD, AND, LDR, STR, LSHF, RSHFL, RSHFA
-        set_off(T[1]) -> JSR, BR, BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp, TRAP
-        set_off(T[2]) -> LD, ST, LDI, STI, LEA
-        I[5-0] = 1    -> NOT
-        set_off(T[3]) -> ADD, AND, XOR, LDR, STR, LSHF, RSHFL, RSHFA
-        LF = 0b10     -> ANDi, ADDi, XORi
-             0b01     -> RSHFL
-             0b11     -> RSHFA
-        CF = 0bnzp
-*/
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsequence-point"
-template <const unsigned op> uint16_t buildInstruction(const TokenList& tokens) {
-    const uint32_t opbit = 1 << op;
-    const uint16_t opcode = tokens[0].getNumValue(4);
-    uint16_t inst = opcode << 12;
-    uint16_t r1 = 0, r2 = 0;
-    uint16_t off_bits = 16;
-    // if(op & 0x0000800) off_bits = 16;
-    if(0x00000004 & opbit) off_bits = 11;
-    if(0x0007C7F8 & opbit) off_bits = 9;
-    if(0x00C00000 & opbit) off_bits = 6;
-    if(0x10300000 & opbit) off_bits = 5;
-    if(0x07000000 & opbit) off_bits = 4;
-    if(0x10300000 & opbit && (tokens.back().isNumber())) inst |= 1 << 5; 
-    if(0x02000000 & opbit) inst |= 0b01 << 4;
-    if(0x04000000 & opbit) inst |= 0b11 << 4;
-    if(0x00080000 & opbit) inst |= 0x3F;
-    if(0x17FFC000 & opbit) r1 = tokens[1].getNumValue(3); 
-    if(0x000007F8 & opbit) r1 = tokens[0].getCondFlags(); 
-    if(0x00000004 & opbit) r1 = 4;
-    if(0x00000001 & opbit) r2 = 7;
-    if(0x17F80000 & opbit) r2 = tokens[2].getNumValue(3); 
-    if(0x00003000 & opbit) r2 = tokens[1].getNumValue(3); 
-    if(0x17FFF7FD & opbit) inst |= r1 << 9 | r2 << 6;
-    if(0x00000FFC & opbit) inst |= tokens[1].getNumValue(off_bits);
-    if(0x0007C000 & opbit) inst |= tokens[2].getNumValue(off_bits);
-    if(0x17F00000 & opbit) inst |= tokens[3].getNumValue(off_bits);
-    return inst;
+uint16_t assembleLine(std::string& line, std::string& ret_string) {
+    return assembleLine(tokenize(line), ret_string);
 }
-#pragma GCC diagnostic pop
-
-/* Instruction 28 is absent because TRAP has been disabled */
-uint16_t (*inst_table[OP::COUNT])(const TokenList&) = {
-    buildInstruction<0>,  buildInstruction<1>,  buildInstruction<2>,  buildInstruction<3>,
-    buildInstruction<4>,  buildInstruction<5>,  buildInstruction<6>,  buildInstruction<7>,
-    buildInstruction<5>,  buildInstruction<9>,  buildInstruction<10>, buildInstruction<11>,
-    buildInstruction<12>, buildInstruction<13>, buildInstruction<14>, buildInstruction<15>,
-    buildInstruction<16>, buildInstruction<17>, buildInstruction<18>, buildInstruction<19>,
-    buildInstruction<20>, buildInstruction<21>, buildInstruction<22>, buildInstruction<23>,
-    buildInstruction<24>, buildInstruction<25>, buildInstruction<26>, buildInstruction<28>
-};
 
 uint16_t assembleLine(std::string& line) {
-    TokenList token_list = tokenize(line);
-    if (token_list.empty()) return 0;
-    switch (token_list[0].getType()) {
-    case TokenType::Trap: {
-        /* Modify token_list to obtain a TRAP xvector instruction */
-        /* XXX TRAP::Type should be accessible as a hexnumber */
-        token_list = {
-            Token(TokenType::Instruction, OP::TRAP),
-            Token(TokenType::HexNumber  , (int)trapEnumToOpcodeMap[token_list[0].get<TRAP::Type>()]),
-        };
-        auto opcode = token_list[0].get<OP::Type>();
-        uint16_t inst = inst_table[opcode](token_list);
-        updateInstructionAddress();
-        return inst;
-    }
-    case TokenType::Instruction: {
-        auto opcode = token_list[0].get<OP::Type>();
-        uint16_t inst = inst_table[opcode](token_list);
-        updateInstructionAddress();
-        return inst;
-    }
-    case TokenType::Label: {
-        if(token_list.size() > 1) {
-            switch(token_list[1].get<POP::Type>()) {
-                case POP::FILL:
-                    updateInstructionAddress();
-                    return token_list[2].getNumValue();
-                case POP::BLKW:
-                    updateInstructionAddress(token_list[2].getNumValue());
-                    return 0;
-                case POP::STRINGZ:
-                    //NULL terminated string
-                    //TODO check if the string is ASCII compatible
-                    updateInstructionAddress(token_list[2].get<std::string>().length() + 1); 
-                    break;
-                default:
-                    //TODO more meaningful error
-                    throw asm_error::invalid_pseudo_op();
-            }
-        }
-        return 0;
-    }
-    case TokenType::PseudoOp:
-        //.ORIG and .END
-        return 0;
-    default:
-        throw std::logic_error("ERROR unknown error");
-    }
+    std::string ret_string = "";
+    return assembleLine(tokenize(line), ret_string);
 }
