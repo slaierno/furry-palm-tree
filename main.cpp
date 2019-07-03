@@ -5,9 +5,12 @@
 
 #include "lc3-hw.hpp"
 #include "memory.hpp"
+#include "lc3-debug.hpp"
 
 int main(int argc, const char* argv[])
 {
+    bool debug_print = false;
+
     if (argc < 2)
     {
         /* show usage string */
@@ -17,6 +20,10 @@ int main(int argc, const char* argv[])
 
     for (int j = 1; j < argc; ++j)
     {
+        if (j == 1 && (std::string("-g").compare(argv[j]) == 0)) {
+            debug_print = true;
+            continue;
+        }
         if (!read_image(argv[j]))
         {
             std::cerr << "failed to load image: " << argv[j] << std::endl;
@@ -28,8 +35,6 @@ int main(int argc, const char* argv[])
     disable_input_buffering();
 
     /* set the PC to starting position */
-    /* 0x3000 is the default */
-    enum { PC_START = 0x3000 };
     reg[R_PC] = PC_START;
 
     while (running)
@@ -41,6 +46,7 @@ int main(int argc, const char* argv[])
         uint16_t instr = mem_read(reg[R_PC]++);
         uint16_t op = instr >> 12;
 
+        if(debug_print) std::cout << mcodeToString(instr) << std::endl;
         op_table[op](instr);
     }
     

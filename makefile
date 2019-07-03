@@ -2,6 +2,7 @@ CC = g++
 DEPS = \
 	lc3-hw.hpp \
 	lc3-video.hpp \
+	lc3-debug.hpp \
 	memory.hpp
 OBJ = main.o \
 	lc3-hw.o \
