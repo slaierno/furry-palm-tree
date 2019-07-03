@@ -7,7 +7,8 @@ DEPS = \
 OBJ = main.o \
 	lc3-hw.o \
 	memory.o
-PROG = main.exe
+PROG = fpt.exe
+PLAYGROUND_PROG = fpt-playground.exe
 TEST_OBJ = main_test.o \
 		   lc3-hw.o \
 		   memory.o
@@ -30,7 +31,7 @@ all: test release
 
 playground:
 	$(CC) -g -O0 -o playground.exe playground.cpp $(CPPFLAGS) $(TEST_LDFLAGS)
-	./playground.exe
+	./$(PLAYGROUND_PROG)
 
 clean:
 	rm -f ./*.o
