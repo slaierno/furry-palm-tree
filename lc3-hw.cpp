@@ -1,6 +1,7 @@
 #include "lc3-hw.hpp"
 
 uint16_t reg[R_COUNT];
+uint16_t PC_START = 0x3000;
 
 void update_flags(uint16_t r) {
     if(reg[r] == 0) {
@@ -18,6 +19,7 @@ void read_image_file(FILE* file)
     uint16_t origin;
     fread(&origin, sizeof(origin), 1, file);
     origin = swap16(origin);
+    PC_START = origin;
 
     /* we know the maximum file size so we only need one fread */
     uint16_t max_read = UINT16_MAX - origin;

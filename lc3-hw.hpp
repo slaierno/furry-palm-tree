@@ -53,6 +53,10 @@ enum {
 };
 extern uint16_t reg[R_COUNT];
 
+/* Where the first program instruction is loaded */
+/* 0x3000 is the default */
+extern uint16_t PC_START;
+
 /* Instruction set
  * 
  * There are 16 opcodes in LC-3.
