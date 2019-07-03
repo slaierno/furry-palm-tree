@@ -157,9 +157,9 @@ uint16_t assembleLine(TokenList token_list, std::string& ret_string) {
         trapToInstruction(token_list);
         // intended fallthrough
     case TokenType::Instruction: {
+        updateInstructionAddress();
         auto opcode = front().get<OP::Type>();
         uint16_t inst = inst_table[opcode](token_list);
-        updateInstructionAddress();
         return inst;
     }
     case TokenType::PseudoOp:
@@ -172,7 +172,7 @@ uint16_t assembleLine(TokenList token_list, std::string& ret_string) {
             return 0;
         case POP::STRINGZ:
             ret_string = back().get<std::string>();
-            updateInstructionAddress(ret_string.size()); 
+            updateInstructionAddress(ret_string.length() + 1); 
             return 0;
         case POP::ORIG:
         case POP::END:
