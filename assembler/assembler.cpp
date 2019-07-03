@@ -3,29 +3,6 @@
 #include "Token.hpp"
 #include "utils.hpp"
 
-void writeMachineCode(std::ofstream& outfile, std::string line) {
-    auto writeBigEndian = [&outfile](uint16_t code = 0, size_t size = 1) constexpr {
-        const uint16_t big_endian = code >> 8 | code << 8;
-        outfile.write(reinterpret_cast<char const *>(&big_endian), 2 * size);
-    };
-    std::string ret_string = "";
-
-    const uint16_t prev_address = inst_address;
-    const uint16_t code = assembleLine(line, ret_string);
-    if (!ret_string.empty()) {
-        for(unsigned char const c : ret_string)
-            writeBigEndian(c);
-        writeBigEndian();
-    } else {
-        writeBigEndian(code, inst_address - prev_address);
-    }
-}
-
-void writeAddress(std::ofstream&outfile, const uint16_t address) {
-    uint16_t big_endian = address >> 8 | address << 8;
-    outfile.write(reinterpret_cast<char const *>(&big_endian), 2);
-}
-
 int main(int argc, const char* argv[])
 {
     if (argc < 2)
@@ -47,7 +24,7 @@ int main(int argc, const char* argv[])
             while (getline(asm_file, line)) {
                 validateLine(line);
             }
-            writeAddress(outfile, start_address);
+            writeWords(outfile, start_address);
             inst_address = start_address;
             asm_file.clear();
             asm_file.seekg(std::ios::beg);

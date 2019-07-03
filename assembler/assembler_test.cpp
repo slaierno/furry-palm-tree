@@ -162,13 +162,13 @@ TEST_F(TestInstruction, JSR) {
         "JSR PIPPO\n",
         {{TokenType::Instruction, OP::JSR},
          {TokenType::Label      , "PIPPO"}},
-        OP_JSR << 12 | 1 << 11 | ((0x3010 - 0x3000) & 0x7FF)
+        OP_JSR << 12 | 1 << 11 | ((0x3010 - 0x3001) & 0x7FF)
     );
     testGoodInstruction(
         "JSR PLUTO\n",
         {{TokenType::Instruction, OP::JSR},
          {TokenType::Label      , "PLUTO"}},
-        OP_JSR << 12 | 1 << 11 | ((0x2FF0 - 0x3000) & 0x7FF)
+        OP_JSR << 12 | 1 << 11 | ((0x2FF0 - 0x3001) & 0x7FF)
     );
 
     /* TEST BAD INSTRUCTION */
@@ -210,7 +210,7 @@ TEST_F(TestInstruction, BR) {
              {TokenType::Label      , "PIPPO"}},
             opcode                 << 12  | 
             brToCondFlag(inst_op)  << 9   | 
-            ((0x3010 - 0x3000)     & 0x7FF)
+            ((0x3010 - 0x3001)     & 0x7FF)
         );
     }
     /* TEST BAD INSTRUCTION */
@@ -322,7 +322,7 @@ TEST_F(TestInstruction, LD_ST_LDI_STI_LEA) {
             {{TokenType::Instruction, std::get<1>(inst)},
              {TokenType::Register   , REG::R1},
              {TokenType::Label      , "PIPPO"}},
-            std::get<2>(inst) << 12 | R_R1 << 9 | ((0x3010 - 0x3000) & 0x1FF)
+            std::get<2>(inst) << 12 | R_R1 << 9 | ((0x3010 - 0x3001) & 0x1FF)
         );
         /* TEST BAD INSTRUCTION */
         testBadInstruction<asm_error::invalid_format>(
@@ -522,12 +522,9 @@ class TestAssembly : public TestCommon {};
 TEST_F(TestAssembly, Labels) {
     std::vector<std::string> inst_list = {
         ".orig #x4000",
-        "PIPPO\n",        //x4000
-        "JSR PLUTO\n",    //x4000
-        "PAPERINO\n",     //x4001
-        "RTI\n",          //x4001
-        "PLUTO\n",        //x4002
-        "JSR PAPERINO\n", //x4002
+        "PIPPO JSR PLUTO\n",    //x4000
+        "PAPERINO RTI\n",       //x4001
+        "PLUTO JSR PAPERINO\n", //x4002
     };
     for(auto inst_str : inst_list)
         EXPECT_NO_THROW(validateLine(inst_str)) << inst_str;
@@ -552,9 +549,185 @@ TEST_F(TestAssembly, Labels) {
         if (inst != 0) code_list.push_back(inst);
     }) << inst_str;
     EXPECT_EQ(3, code_list.size());
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4002 - 0x4000) & 0x7FF), code_list[0]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4002 - 0x4001) & 0x7FF), code_list[0]);
     EXPECT_EQ(OP_RTI << 12,                                         code_list[1]);
-    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4001 - 0x4002) & 0x7FF), code_list[2]);
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | ((0x4001 - 0x4003) & 0x7FF), code_list[2]);
+}
+
+/************************************************************************/
+/*                              MAIN TEST                               */
+/************************************************************************/
+// This should be the main test where pretty much everything is tested.
+// It should involve a wide variety of operations, labels, every
+//   pseudo-op, forward jumps and traps.
+//
+// How it should work:
+// - Create a real assembly program
+// - Process every line with validateLine()
+// - Create a file to use as real output
+// - .origin should be different from x3000
+// - Assemble everything using writeWords() and writeMachineCode()
+// - Check for file size
+// - Check actual file content
+// - ...execute it and check the result?
+//
+// A good idea is to make a scalar product between two 3D vector and
+//   store the result in a third vector.
+/***********************************************************************/
+
+void testWriteWords(std::vector<uint16_t>& out, const uint16_t word = 0, const size_t size = 1) {
+    for(size_t i = 0; i < size; i++)
+        out.push_back(word);
+}
+
+void testWriteMachineCode(std::vector<uint16_t>& out, std::string line) {
+    std::string ret_string = "";
+
+    const uint16_t prev_address = inst_address;
+    uint16_t code;
+    EXPECT_NO_THROW(code = assembleLine(line, ret_string)) << line;
+    if (!ret_string.empty()) {
+        for(unsigned char const c : ret_string)
+            testWriteWords(out, c);
+        testWriteWords(out);
+    } else {
+        testWriteWords(out, code, inst_address - prev_address);
+    }
+}
+
+int16_t labelOffset(const std::string label) {
+    return label_map[label] - inst_address;
+}
+TEST_F(TestAssembly, Program) {
+    auto filename = "test1.asm";
+
+    std::ifstream asm_file;
+    asm_file.open(filename);
+    ASSERT_TRUE(asm_file.is_open());
+
+    std::string line;
+    std::vector<std::string> program;
+
+    while(getline(asm_file, line)) {
+        EXPECT_NO_THROW(validateLine(line));
+        program.push_back(line);
+    }
+    asm_file.close();
+    EXPECT_EQ(18, program.size());
+
+    EXPECT_EQ(0x3000, start_address);
+    inst_address = start_address;
+
+    EXPECT_EQ(5, label_map.size());
+    EXPECT_NE(label_map.end(), label_map.find("ARG1"));
+    EXPECT_NE(label_map.end(), label_map.find("ARG2"));
+    EXPECT_NE(label_map.end(), label_map.find("BYE"));
+    EXPECT_NE(label_map.end(), label_map.find("STACK_REG"));
+    EXPECT_NE(label_map.end(), label_map.find("NEXT"));
+
+    EXPECT_EQ(0x3003, label_map["ARG1"]);
+    EXPECT_EQ(0x3004, label_map["ARG2"]);
+    EXPECT_EQ(0x3005, label_map["BYE"]);
+    EXPECT_EQ(0x3010, label_map["STACK_REG"]);
+    EXPECT_EQ(0x3011, label_map["NEXT"]);
+
+    std::vector<uint16_t> code_list;
+
+    testWriteWords(code_list, start_address);
+    EXPECT_EQ(0x3000, code_list.back());
+
+    int i = 0;
+    //.orig #x3000
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3000, inst_address);
+    i++;
+    //
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3000, inst_address);
+    i++;
+    //LD R1 ARG1
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(2, labelOffset("ARG1"));
+    EXPECT_EQ(OP_LD << 12 | R_R1 << 9 | (labelOffset("ARG1") & 0x1FF), code_list.back());
+    EXPECT_EQ(0x3001, inst_address);
+    i++;
+    //LD R2 ARG2
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(2, labelOffset("ARG2"));
+    EXPECT_EQ(OP_LD << 12 | R_R2 << 9 | (labelOffset("ARG2") & 0x1FF), code_list.back());
+    EXPECT_EQ(0x3002, inst_address);
+    i++;
+    //JSR NEXT
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(14, labelOffset("NEXT"));
+    EXPECT_EQ(OP_JSR << 12 | 1 << 11 | (labelOffset("NEXT") & 0x7FF), code_list.back());
+    EXPECT_EQ(0x3003, inst_address);
+    i++;
+    //
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3003, inst_address);
+    i++;
+    //ARG1 .FILL #120
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(120, code_list.back());
+    EXPECT_EQ(0x3004, inst_address);
+    i++;
+    //ARG2 .FILL #18
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(18, code_list.back());
+    EXPECT_EQ(0x3005, inst_address);
+    i++;
+    //
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3005, inst_address);
+    i++;
+    //BYE .stringz "Halting..."
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3010, inst_address);
+    //TODO check string
+    EXPECT_EQ(0, code_list.back());
+    i++;
+    //STACK_REG .blkw #1
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0, code_list.back());
+    EXPECT_EQ(0x3011, inst_address);
+    i++;
+    //NEXT
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3011, inst_address);
+    i++;
+    //ST R2 STACK_REG
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(-2, labelOffset("STACK_REG"));
+    EXPECT_EQ(OP_ST << 12 | R_R2 << 9 | (labelOffset("STACK_REG") & 0x1FF), code_list.back());
+    EXPECT_EQ(0x3012, inst_address);
+    i++;
+    //LEA R0 BYE
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(-14, labelOffset("BYE"));
+    EXPECT_EQ(OP_LEA << 12 | R_R0 << 9 | (labelOffset("BYE") & 0x1FF), code_list.back());
+    EXPECT_EQ(0x3013, inst_address);
+    i++;
+    //PUTS
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(OP_TRAP << 12 | TRAP_PUTS, code_list.back());
+    EXPECT_EQ(0x3014, inst_address);
+    i++;
+    //HALT
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(OP_TRAP << 12 | TRAP_HALT, code_list.back());
+    EXPECT_EQ(0x3015, inst_address);
+    i++;
+    //
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3015, inst_address);
+    i++;
+    //.end
+    testWriteMachineCode(code_list, program[i]);
+    EXPECT_EQ(0x3015, inst_address);
+    i++;
+    
+    EXPECT_EQ(22, code_list.size());
 }
 
 int main(int argc, char* argv[])
