@@ -3,6 +3,10 @@
 #ifdef _WIN32
 #include <conio.h>
 #include <windows.h>
+#elif _ANDROID
+#include <unistd.h>
+#include <termios.h>
+#include <sys/mman.h>
 #else
 #include <sys/select.h>
 #include <unistd.h>

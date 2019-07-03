@@ -134,18 +134,26 @@ template <const unsigned op> void exec(uint16_t instr) {
                             //RSHF
                             if((instr >> 5) & 1) { //A flag
                                 //RSHFA
+#ifndef _ANDROID
                                 asm("movw %%bx, %%ax;"
                                     "sarw %%cl, %%ax;"
                                     :"=a"(reg[r0])
                                     : "b"(reg[r1]), "c"(op2)
                                     );
+#else
+				reg[r0] = (int16_t) reg[r1] / (1 << op2);
+#endif
                             } else {
                                 //RSHFL
+#ifndef _ANDROID
                                 asm("movw %%bx, %%ax;"
                                     "shrw %%cl, %%ax;"
                                     :"=a"(reg[r0])
                                     : "b"(reg[r1]), "c"(op2)
                                     );
+#else
+				reg[r0] = reg[r1] >> op2;
+#endif
                             }
                         } else {
                             //LSHF
