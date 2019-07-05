@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "InputBuffer.hpp"
 
 enum
 {
@@ -50,6 +51,8 @@ const static uint16_t userSpaceUpper = 0xFDFF;
  * 
  */
 
-inline void mem_write(uint16_t address, uint16_t val) { memory[address] = val; }
-inline void mem_write88(uint16_t address, uint16_t val_h, uint16_t val_l) { memory[address] = val_h << 8 | (val_l & 0xFF); }
-uint16_t mem_read(uint16_t address);
+extern InputBuffer input_buffer;
+inline        void mem_write(uint16_t address, uint16_t val) { memory[address] = val; }
+inline        void mem_write88(uint16_t address, uint16_t val_h, uint16_t val_l) { memory[address] = val_h << 8 | (val_l & 0xFF); }
+               int check_key();
+          uint16_t mem_read(uint16_t address);

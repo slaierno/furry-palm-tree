@@ -1,5 +1,4 @@
-#include "memory.hpp"
-#include <cstdio>
+#include <iostream>
 #ifdef _WIN32
 #include <conio.h>
 #include <windows.h>
@@ -14,9 +13,13 @@
 #include <sys/mman.h>
 #endif
 
-uint16_t memory[UINT16_MAX];
+#include "memory.hpp"
+#include "InputBuffer.hpp"
 
-static uint16_t check_key()
+uint16_t memory[UINT16_MAX];
+InputBuffer input_buffer;
+
+int check_key()
 {
 #ifdef _WIN32
     return kbhit();
@@ -36,13 +39,11 @@ uint16_t mem_read(uint16_t address)
 {
     if (address == MR_KBSR)
     {
-        if (check_key())
-        {
-            memory[MR_KBSR] = (1 << 15);
-            memory[MR_KBDR] = getchar();
-        }
-        else
-        {
+        char c = input_buffer.pop();
+        if(c) {
+            memory[MR_KBSR] = 1 << 15;
+            memory[MR_KBDR] = (uint16_t) c;
+        } else {
             memory[MR_KBSR] = 0;
         }
     }

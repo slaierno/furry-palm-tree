@@ -1,4 +1,5 @@
 #include "lc3-hw.hpp"
+#include <iostream>
 
 uint16_t reg[R_COUNT];
 uint16_t PC_START = 0x3000;
@@ -101,7 +102,7 @@ void handle_interrupt(int signal)
     exit(-2);
 }
 
-int running = -1;
+int running = 1;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsequence-point"
@@ -183,13 +184,12 @@ template <const unsigned op> void exec(uint16_t instr) {
         {
             case TRAP_GETC:
                 {
-                    reg[R_R0] = (uint16_t) getchar();
+                    reg[R_R0] = (uint16_t) input_buffer.pop_or_wait();
                 }
                 break;
             case TRAP_OUT:
                 {
-                    putc((char)reg[R_R0], stdout);
-                    fflush(stdout);
+                    std::cout << (char)reg[R_R0];
                 }
                 break;
             case TRAP_PUTS:
@@ -198,19 +198,17 @@ template <const unsigned op> void exec(uint16_t instr) {
                     uint16_t* c = &memory[start_address];
                     while(*c)
                     {
-                        putc((char)*c, stdout);
+                        std::cout << (char)*c;
                         ++c;
                     }
-                    fflush(stdout);
                 }
                 break;
             case TRAP_IN:
                 {
                     std::cout << "Enter a character: ";
-                    char c = getchar();
-                    putc(c, stdout);
+                    char c = input_buffer.pop_or_wait();
+                    std::cout << c;
                     reg[R_R0] = (uint16_t) c;
-                    fflush(stdout);
                 }
                 break;
             case TRAP_PUTSP:
@@ -220,18 +218,16 @@ template <const unsigned op> void exec(uint16_t instr) {
                     while(*c)
                     {
                         char c1 = (*c) & 0xFF,
-                                c2 = (*c) >> 8;
-                        putc(c1, stdout);
-                        if(c2) putc(c2, stdout);
+                             c2 = (*c) >> 8;
+                        std::cout << c1;
+                        if(c2) std::cout << c2;
                         ++c;
                     }
-                    fflush(stdout);
                 }
                 break;
             case TRAP_HALT:
                 {
-                    puts("HALT");
-                    fflush(stdout);
+                    std::cout << "HALT";
                     running = 0;
                 }
                 break;
