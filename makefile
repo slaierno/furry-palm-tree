@@ -10,7 +10,9 @@ COMMON_OBJ = \
 	memory.o
 
 OBJ = $(COMMON_OBJ) main.o
-GUI_OBJ = $(COMMON_OBJ) main_gui.o
+GUI_OBJ = $(COMMON_OBJ) \
+			gui/FPTThread.o \
+			main_gui.o
 TEST_OBJ = $(COMMON_OBJ) main_test.o
 
 PROG = fpt.exe
@@ -25,6 +27,7 @@ PLAYGROUND_LDFLAGS = $(TEST_LDFLAGS)
 CPPFLAGS = -pthread -std=c++17 -Wall -Werror
 
 main_gui.o : CPPFLAGS += `wx-config --cxxflags`
+gui/FPTThread.o : CPPFLAGS += `wx-config --cxxflags`
 playground.o main_test.o : CPPFLAGS += -g
 %.o: %.cpp $(DEPS)
 	$(CC) -g -c -o $@ $< $(CPPFLAGS)
@@ -36,6 +39,9 @@ test: $(TEST_OBJ)
 	$(CC) -g -o $(TEST_PROG) $(CPPFLAGS) $^ $(TEST_LDFLAGS)
 	./$(TEST_PROG)
 
+gui: DEPS+= \
+	gui/FPTThread.hpp \
+	gui/FPTFrame.hpp
 gui: $(GUI_OBJ)
 	$(CC) -g -o $(GUI_PROG) $(GUI_CPPFLAGS) $^ $(GUI_LDFLAGS)
 	

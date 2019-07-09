@@ -7,6 +7,10 @@ Requirements:
 * Any suitable C++17 compiler.
 * A version of `make`.
 * [Google Test](https://github.com/google/googletest)
+* `wxWidgets-3.0.4-2` or later
+    * MSYS2: `pacman -S mingw-w64-x86_64-wxWidgets`
+    * WSL?
+    * Linux?
 
 How to build:
 
