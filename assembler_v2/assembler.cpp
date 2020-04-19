@@ -8,26 +8,6 @@
 #include "assembler.hpp"
 
 /*********************************/
-/*          UTILITIES            */
-/*********************************/
-
-uint16_t address_increment(const Instruction& inst) {
-    if (inst.front().getType() == TokenType::PseudoOp) {
-        switch(inst.front().get<POP::Type>()) {
-        case POP::STRINGZ:
-            return inst.back().get<std::string>().length() + 1; //remember the NUL character
-        case POP::BLKW:
-            return inst[1].get<int>();
-        case POP::ORIG: case POP::END:
-            return 0;
-        default:
-            return 1;
-        }
-    }
-    return 1;
-}
-
-/*********************************/
 /*       ASSEMBLER STEPS         */
 /*********************************/
 
@@ -194,7 +174,7 @@ void assemble_step3(const Program& program, LabelMap& label_map) {
                     label_map.find(label.get<std::string>()) == label_map.end()) {
                     throw std::logic_error("Label " + label.get<std::string>() + " not found!");
                 }
-                address+=address_increment(inst);
+                address+=inst.GetAddressIncrement();
             }
         }
     }

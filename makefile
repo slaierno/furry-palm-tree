@@ -18,11 +18,12 @@ GUI_PROG = fpt-gui.exe
 TEST_PROG = fpt-test.exe
 PLAYGROUND_PROG = fpt-playground.exe
 
-GUI_LDFLAGS = `wx-config --libs`
-TEST_LDFLAGS = -lgtest
+LDFLAGS = -lpthread
+GUI_LDFLAGS = $(LDFLAGS) `wx-config --libs`
+TEST_LDFLAGS = $(LDFLAGS) -Lgoogletest/lib -lgtest
 PLAYGROUND_LDFLAGS = $(TEST_LDFLAGS)
 
-CPPFLAGS = -pthread -std=c++17 -Wall -Werror
+CPPFLAGS = -std=c++17 -Wall -Werror -pthread
 
 main_gui.o : CPPFLAGS += `wx-config --cxxflags`
 playground.o main_test.o : CPPFLAGS += -g
@@ -30,7 +31,7 @@ playground.o main_test.o : CPPFLAGS += -g
 	$(CC) -g -c -o $@ $< $(CPPFLAGS)
 
 release: $(OBJ)
-	$(CC) -g -o $(PROG) $^
+	$(CC) -g -o $(PROG) $^ $(LDFLAGS)
 
 test: $(TEST_OBJ)
 	$(CC) -g -o $(TEST_PROG) $(CPPFLAGS) $^ $(TEST_LDFLAGS)

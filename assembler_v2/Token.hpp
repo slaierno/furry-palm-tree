@@ -1,4 +1,4 @@
-#pragma once
+    #pragma once
 
 #include <string>
 #include "commons.hpp"
@@ -13,7 +13,7 @@ public:
     /*          CTOR/DTOR            */
     /*********************************/
     Token(const enum TokenType type, TokenValue val) : mType(type), mValue(val) {}
-              Token(const std::string& token);
+    Token(const std::string& token);
 
     /*********************************/
     /*          Utilities            */
@@ -26,7 +26,22 @@ public:
     constexpr enum TokenType getType() const { return mType; }
     //TODO should give an error if mType is Undefined or does not match with T
     template<typename T>
-    constexpr T get() const { return std::get<T>(mValue); }
+    constexpr T get() const {
+        // if constexpr(std::is_same_v<T, std::string>) {
+        //     return std::string(std::get<std::string_view>(mValue));
+        // } else 
+        if constexpr(cx::holds_variant_v<T, TokenValue>) {
+            //TODO throw something for type mismatch
+            return std::get<T>(mValue);
+        } else if constexpr(std::is_integral_v<T>) {
+            if (const auto& val = get<int>(); val >= std::numeric_limits<T>::min() && val <= std::numeric_limits<T>::max())
+                return static_cast<T>(val);
+            else 
+                throw std::logic_error("Out of range!\n"); //TODO throw meaningful error
+        } else {
+            static_assert(cx::fail_v<T>, "Invalid get<> template type.");
+        }
+    }
 
     /*********************************/
     /*         OPERATORS             */

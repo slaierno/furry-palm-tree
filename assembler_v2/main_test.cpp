@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include "gtest/gtest.h"
-#include "/workspace/furry-palm-tree/assembler_v2/commons.hpp"
 #include "assembler_test.hpp"
 
 class TestAssembler_v2 : public ::testing::Test {};
@@ -301,6 +300,7 @@ TEST_F(TestAssembler_v2, AssemblerStep2Utils) {
     ASSERT_TRUE((check_arguments<TokenType::Label, TokenType::Label, TokenType::Instruction, TokenType::Number, TokenType::Label>(inst)));
 
     ASSERT_TRUE(inst.ConsumeLabels(label_map));
+    ASSERT_FALSE(Instruction("").ConsumeLabels(label_map));
     ASSERT_EQ(3, label_map.size());
     ASSERT_NE(label_map.end(), label_map.find("PIPPO"));
     ASSERT_NE(label_map.end(), label_map.find("PLUTO"));

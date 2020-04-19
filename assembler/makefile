@@ -16,7 +16,7 @@ TEST_OBJ = assembler_test.o \
 		  $(OBJS)
 ASM_PROG = fpt-asm.exe
 TEST_PROG = fpt-asm_test.exe
-ASM_CPPFLAGS = -g -std=c++17 -Wall -Werror \
+ASM_CPPFLAGS = -g -std=c++2a -Wall -Werror \
 			   -D_NO_W32_PSEUDO_MODIFIERS -pthread
 TEST_LDFLAGS = -lgtest
 

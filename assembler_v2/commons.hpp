@@ -6,6 +6,7 @@
 #include <variant>
 #include <algorithm>
 #include "../lc3-hw.hpp"
+#include "cx.hpp"
 
 /*********************************/
 /*            MACROS             */
@@ -20,40 +21,40 @@
     ENUM_MACRO(Undefined)
 
 #define OP_TYPES \
-    ENUM_MACRO(RET) \
-    ENUM_MACRO(RTI) \
-    ENUM_MACRO(JSR) \
-    ENUM_MACRO(BR) \
-    ENUM_MACRO(BRn) \
-    ENUM_MACRO(BRz) \
-    ENUM_MACRO(BRp) \
-    ENUM_MACRO(BRnz) \
-    ENUM_MACRO(BRnp) \
-    ENUM_MACRO(BRzp)  \
-    ENUM_MACRO(BRnzp) \
-    ENUM_MACRO(TRAP) \
-    ENUM_MACRO(JSRR) \
-    ENUM_MACRO(JMP) \
-    ENUM_MACRO(LD) \
-    ENUM_MACRO(ST) \
-    ENUM_MACRO(LDI) \
-    ENUM_MACRO(STI) \
-    ENUM_MACRO(LEA) \
-    ENUM_MACRO(NOT) \
-    ENUM_MACRO(ADD) \
-    ENUM_MACRO(AND) \
-    ENUM_MACRO(LDR) \
-    ENUM_MACRO(STR) \
-    ENUM_MACRO(LSHF) \
-    ENUM_MACRO(RSHFL) \
-    ENUM_MACRO(RSHFA) \
-    ENUM_MACRO(XOR) \
-    ENUM_MACRO(GETC) \
-    ENUM_MACRO(OUT) \
-    ENUM_MACRO(PUTS) \
-    ENUM_MACRO(IN) \
-    ENUM_MACRO(PUTSP) \
-    ENUM_MACRO(HALT)
+    /* 0*/ENUM_MACRO(RET) \
+    /* 1*/ENUM_MACRO(RTI) \
+    /* 2*/ENUM_MACRO(JSR) \
+    /* 3*/ENUM_MACRO(BR) \
+    /* 4*/ENUM_MACRO(BRn) \
+    /* 5*/ENUM_MACRO(BRz) \
+    /* 6*/ENUM_MACRO(BRp) \
+    /* 7*/ENUM_MACRO(BRnz) \
+    /* 8*/ENUM_MACRO(BRnp) \
+    /* 9*/ENUM_MACRO(BRzp)  \
+    /*10*/ENUM_MACRO(BRnzp) \
+    /*11*/ENUM_MACRO(TRAP) \
+    /*12*/ENUM_MACRO(JSRR) \
+    /*13*/ENUM_MACRO(JMP) \
+    /*14*/ENUM_MACRO(LD) \
+    /*15*/ENUM_MACRO(ST) \
+    /*16*/ENUM_MACRO(LDI) \
+    /*17*/ENUM_MACRO(STI) \
+    /*18*/ENUM_MACRO(LEA) \
+    /*19*/ENUM_MACRO(NOT) \
+    /*20*/ENUM_MACRO(ADD) \
+    /*21*/ENUM_MACRO(AND) \
+    /*22*/ENUM_MACRO(LDR) \
+    /*23*/ENUM_MACRO(STR) \
+    /*24*/ENUM_MACRO(LSHF) \
+    /*25*/ENUM_MACRO(RSHFL) \
+    /*26*/ENUM_MACRO(RSHFA) \
+    /*27*/ENUM_MACRO(XOR) \
+    /*28*/ENUM_MACRO(GETC) \
+    /*29*/ENUM_MACRO(OUT) \
+    /*30*/ENUM_MACRO(PUTS) \
+    /*31*/ENUM_MACRO(IN) \
+    /*32*/ENUM_MACRO(PUTSP) \
+    /*33*/ENUM_MACRO(HALT)
 
 #define POP_TYPES \
     ENUM_MACRO(ORIG) \
@@ -113,11 +114,13 @@ namespace REG {
 /* Value that can be assumed by a Token.
  * std::string variant holds for both strings and label.
  */
-using TokenValue = std::variant<OP::Type, 
-                                REG::Type, 
-                                POP::Type, 
-                                int, 
-                                std::string>;
+template<typename String>
+using TokenValueGeneric = std::variant<OP::Type, 
+                                       REG::Type, 
+                                       POP::Type, 
+                                       int, 
+                                       String>;
+using TokenValue = TokenValueGeneric<std::string>;
 
 /*********************************/
 /*            MAPS               */
@@ -149,12 +152,12 @@ static std::ostream& operator<<(std::ostream& os, const TokenValue& v)
     return os;
 }
 
-auto case_insensitive_compare = [](std::string lhs, std::string rhs) {
+static inline auto case_insensitive_compare = [](std::string lhs, std::string rhs) {
     std::transform(lhs.begin(), lhs.end(), lhs.begin(), ::toupper);
     std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::toupper);
     return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 };
-std::map<std::string, std::pair<TokenType, TokenValue>, decltype(case_insensitive_compare)> StringToTypeValuePair { {
+static std::map<std::string, std::pair<TokenType, TokenValue>, decltype(case_insensitive_compare)> StringToTypeValuePairMap { {
 #define ENUM_MACRO(X) {#X, {TokenType::Instruction, OP::X}},
     OP_TYPES
 #undef ENUM_MACRO
@@ -164,7 +167,7 @@ std::map<std::string, std::pair<TokenType, TokenValue>, decltype(case_insensitiv
 #define ENUM_MACRO(X) {#X, {TokenType::Register, REG::X}},
     REG_TYPES
 #undef ENUM_MACRO
-}, case_insensitive_compare};
+}};
 
 // TODO these can be vectors, they would be much more efficient but...
 // Yes, they are NOT maps, but we are keeping names omogeneous!
@@ -260,113 +263,32 @@ inline std::string trim_line(std::string line) {
 /* A LabelMap is a map where [key,value] == [label name, address location] */
 using LabelMap = std::map<std::string, uint16_t>;
 
-#if 0
-/* Map which ties instruction strings to their enum type */
-#define o(N) {#N, OP::N}
-const std::map<std::string, OP::Type> stringToOpEnumMap {
-    o(RET)  , o(RTI)  , o(JSR)  , o(BR)   , o(BRn)  , o(BRz)  , o(BRp)  , o(BRnz) , o(BRnp) , o(BRzp) , 
-    o(BRnzp), o(TRAP) , o(JSRR) , o(JMP)  , o(LD)   , o(ST)   , o(LDI)  , o(STI)  , o(LEA)  , o(NOT)  , 
-    o(ADD)  , o(AND)  , o(LDR)  , o(STR)  , o(LSHF) , o(RSHFL), o(RSHFA), o(XOR)  , o(GETC) , o(OUT)  , 
-    o(PUTS) , o(IN)   , o(PUTSP), o(HALT)
+//Duplicate enums to map alias with HW opcode
+enum {
+    OP_RET = OP_JMP, 
+    OP_BRn = OP_BR,
+    OP_BRz = OP_BR,
+    OP_BRp = OP_BR,
+    OP_BRnz = OP_BR,
+    OP_BRnp = OP_BR,
+    OP_BRzp = OP_BR,
+    OP_BRnzp = OP_BR,
+    OP_JSRR = OP_JSR,
+    OP_LSHF = OP_RES,
+    OP_RSHFL = OP_RES,
+    OP_RSHFA = OP_RES,
+    OP_GETC = OP_TRAP,
+    OP_OUT = OP_TRAP,
+    OP_PUTS = OP_TRAP,
+    OP_IN = OP_TRAP,
+    OP_PUTSP = OP_TRAP,
+    OP_HALT = OP_TRAP,
 };
-#undef o
 
 /* Array which associates every assembly instruction with its binary opcode */
 /* Traps are not here, of course, since the should translate to TRAP instrunctions */
-#define o(N) OP_ ## N
-const std::array<uint16_t, OP::COUNT> opEnumToOpcodeMap {
-    o(JMP), o(RTI), o(JSR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR) , o(BR),
-    o(BR) , o(BR) , o(TRAP), o(JSR), o(JMP), o(LD) , o(ST) , o(LDI), o(STI), 
-    o(LEA), o(NOT), o(ADD) , o(AND), o(LDR), o(STR), o(RES), o(RES), o(RES),
-    o(XOR)
+#define ENUM_MACRO(X) OP_ ## X,
+constexpr std::array<uint16_t, OP::COUNT> opEnumToOpcodeMap {
+    OP_TYPES
 };
-#undef o
-
-/* Map which ties pseudo-op strings to their enum type */
-#define p(N) {#N, POP::N}
-const std::map<std::string, POP::Type> stringToPOpEnumMap {
-    p(ORIG), p(FILL), p(BLKW), p(STRINGZ), p(END)
-};
-#undef p
-
-#define t(N) TRAP_ ## N
-const std::array<uint16_t, 7> trapEnumToOpcodeMap {
-    t(GETC), t(OUT), t(PUTS), t(IN), t(PUTSP), t(HALT)
-};
-#undef t
-
-/* Map which ties register strings to their enum type */
-#define r(N) {#N, REG::N}
-const std::map<std::string, REG::Type> stringToRegEnumMap {
-    r(R0), r(R1), r(R2), r(R3), r(R4), r(R5), r(R6), r(R7),
-};
-#undef r
-
-#define r(N) R_ ## N
-const std::array<uint16_t, REG::COUNT> regEnumToOpcodeMap {
-    r(R0), r(R1), r(R2), r(R3), r(R4), r(R5), r(R6), r(R7),
-};
-#undef r
-
-/* These consts represents all the possible arguments combinations for OP type*/
-const std::vector<enum TokenType> NO_ARGS {};
-const std::vector<enum TokenType> Label {TokenType::Label};
-const std::vector<enum TokenType> Reg {TokenType::Register};
-const std::vector<enum TokenType> Num {TokenType::Number};
-const std::vector<enum TokenType> Reg_Label {TokenType::Register, TokenType::Label};
-const std::vector<enum TokenType> Reg_Reg {TokenType::Register, TokenType::Register};
-const std::vector<enum TokenType> Reg_Reg_Reg {TokenType::Register, TokenType::Register, TokenType::Register};
-const std::vector<enum TokenType> Reg_Reg_Num {TokenType::Register, TokenType::Register, TokenType::Number};
-
-/* Map which associates every instruction with every possible arguments combination */
-const std::multimap<OP::Type, const std::vector<enum TokenType>> validInstructionMap {
-    {OP::RET, NO_ARGS}      , {OP::RTI, NO_ARGS}      , {OP::JSR, Label},
-    {OP::BR, Label}         , {OP::BRn, Label}        , {OP::BRz, Label},
-    {OP::BRp, Label}        , {OP::BRnz, Label}       , {OP::BRnp, Label},
-    {OP::BRzp, Label}       , {OP::BRnzp, Label}      , {OP::TRAP, Num},
-    {OP::JSRR, Reg}         , {OP::JMP, Reg}          , {OP::LD, Reg_Label},
-    {OP::ST, Reg_Label}     , {OP::LDI, Reg_Label}    , {OP::STI, Reg_Label},
-    {OP::LEA, Reg_Label}    , {OP::NOT, Reg_Reg}      , {OP::ADD, Reg_Reg_Reg},
-    {OP::ADD, Reg_Reg_Num}  , {OP::AND, Reg_Reg_Reg}  , {OP::AND, Reg_Reg_Num},
-    {OP::LDR, Reg_Reg_Num}  , {OP::STR, Reg_Reg_Num}  , {OP::LSHF, Reg_Reg_Num}, 
-    {OP::RSHFL, Reg_Reg_Num}, {OP::RSHFA, Reg_Reg_Num}, {OP::XOR, Reg_Reg_Reg},
-    {OP::XOR, Reg_Reg_Num}
-};
-
-/*********************************/
-/*          FUNCTIONS            */
-/*********************************/
-
-/* These are slow, used only for debug strings */
-template<typename T> static std::string enumToString(T en);
-template<>           inline std::string enumToString(const OP::Type  en) {
-    for(auto&& [key,val] : stringToOpEnumMap) if(en == val) return key;
-    return "INVALID";
-};
-template<>           inline std::string enumToString(const REG::Type en) {
-    for(auto&& [key,val] : stringToRegEnumMap) if(en == val) return key;
-    return "INVALID";
-};
-
-static inline uint8_t brToCondFlag(const OP::Type op) {
-    switch(op) {
-    case OP::BR:
-    case OP::BRnzp:
-        return 0b111;
-    case OP::BRn:
-        return 0b100;
-    case OP::BRz:
-        return 0b010;
-    case OP::BRp:
-        return 0b001;
-    case OP::BRnz:
-        return 0b110;
-    case OP::BRnp:
-        return 0b101;
-    case OP::BRzp:
-        return 0b011;
-    default:
-        return 0;
-    }
-}
-#endif
+#undef ENUM_MACRO

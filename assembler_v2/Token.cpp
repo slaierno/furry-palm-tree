@@ -1,5 +1,4 @@
 #include "Token.hpp"
-#include "/workspace/furry-palm-tree/assembler_v2/commons.hpp"
 #include <cassert>
 #include <regex>
 #include <stdexcept>
@@ -16,7 +15,7 @@ Token::Token(const std::string& token) : mToken(token) {
     //  - It does not start with a number or an "r"/"R" followed by numbers only
     //  - It only contains alphanumeric characters and underscores
     const std::regex label_regex("^(?![rR]*[0-9]+$)[a-zA-Z0-9_]+$");
-    if(auto search = StringToTypeValuePair.find(token); search != StringToTypeValuePair.end()) {
+    if(auto search = StringToTypeValuePairMap.find(token); search != StringToTypeValuePairMap.end()) {
         // A keyword has been recognized
         mType = search->second.first;
         mValue = search->second.second;

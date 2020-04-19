@@ -10,16 +10,14 @@ class Instruction {
 public:
     Instruction(std::string str = "", unsigned line_number = 0);
 
-    /* Consume labels at the start of an instruction.
-    * It returns a boolean if at least one label was present.
-    * TODO remove bool return value?
-    */
+    /* Consume labels at the start of an instruction. */
     bool ConsumeLabels(LabelMap&, uint16_t address = 0);
 
-    uint16_t GetMachineCode(const LabelMap&) const;
+    std::vector<uint16_t> GetMachineCode(const LabelMap&) const;
 
     auto GetLineNumber() const { return mLineNumber; }
     auto GetOGString() const { return mString; }
+    uint16_t GetAddressIncrement() const;
 
     auto empty() const { return mTokenDeque.empty(); }
     auto size() const { return mTokenDeque.size(); }

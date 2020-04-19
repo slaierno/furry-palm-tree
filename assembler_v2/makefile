@@ -1,10 +1,14 @@
-CC = g++
+CC = g++-10
+INCLUDE_DIR = ../include
+VM_DIR = ..
 ASM_DEPS = \
 	Token.hpp \
 	Instruction.hpp \
 	commons.hpp \
 	assembler.hpp \
-	assembler_test.hpp
+	assembler_test.hpp \
+	$(VM_DIR)/lc3-hw.hpp \
+	$(INCLUDE_DIR)/cx.hpp
 OBJS = Token.o \
        Instruction.o \
 	   assembler.o
@@ -14,16 +18,18 @@ TEST_OBJ = main_test.o \
 		  $(OBJS)
 ASM_PROG = fpt-asm.exe
 TEST_PROG = fpt-asm_test.exe
-ASM_CPPFLAGS = -g -std=c++2a -Wall -Werror \
+ASM_CPPFLAGS = -g -std=gnu++20 -Wall -Werror \
 			   -D_NO_W32_PSEUDO_MODIFIERS -pthread \
-               -isystem /workspace/googletest-release-1.10.0/googletest/include
-TEST_LDFLAGS = -L/workspace/googletest-release-1.10.0/lib -lgtest
+               -isystem $(VM_DIR)/googletest/googletest/include \
+			   -I$(INCLUDE_DIR)
+LDFLAGS = -lpthread
+TEST_LDFLAGS = $(LDFLAGS) -L../googletest/lib -lgtest
 
 %.o: %.cpp $(ASM_DEPS)
-	$(CC) $(ASM_CPPFLAGS) -c -o $@ $<
+	$(CC) $(ASM_CPPFLAGS) -c -o $@ $< $(LDFLAGS)
 
 release: $(ASM_OBJ)
-	$(CC) -o $(ASM_PROG) $(ASM_CPPFLAGS) $^
+	$(CC) -o $(ASM_PROG) $(ASM_CPPFLAGS) $^ $(LDFLAGS)
 
 test: $(TEST_OBJ)
 	$(CC) -o $(TEST_PROG) $(ASM_CPPFLAGS) $^ $(TEST_LDFLAGS)
