@@ -171,8 +171,8 @@ void assemble_step3(const Program& program, LabelMap& label_map) {
                 end_found = inst.front() == TokenConsts::END;
                 if (const auto& label = inst.back(); 
                     label.getType() == TokenType::Label &&
-                    label_map.find(label.get<std::string>()) == label_map.end()) {
-                    throw std::logic_error("Label " + label.get<std::string>() + " not found!");
+                    label_map.find(label.get<cx::string>()) == label_map.end()) {
+                    throw std::logic_error("Label " + label.getString() + " not found!");
                 }
                 address+=inst.GetAddressIncrement();
             }

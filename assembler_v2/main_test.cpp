@@ -84,7 +84,7 @@ TEST_F(TestAssembler_v2, TokenConstructor) {
 
     #define ASSERT_LABEL(STR) \
         ASSERT_EQ(TokenType::Label, Token(STR).getType()); \
-        ASSERT_EQ(STR, Token(STR).get<std::string>());
+        ASSERT_EQ(STR, Token(STR).getString());
 
     ASSERT_LABEL("Test");
     ASSERT_LABEL("Test2");
@@ -117,7 +117,7 @@ TEST_F(TestAssembler_v2, TokenConstructor) {
     };
     #define ASSERT_STRING(STR) ({\
         ASSERT_EQ(TokenType::String, Token(stringify(STR)).getType()); \
-        ASSERT_EQ(STR, Token(stringify(STR)).get<std::string>()); })
+        ASSERT_EQ(STR, Token(stringify(STR)).getString()); })
 
     //Every valid label can be a valid string also, if enclosed in quotes.
     ASSERT_STRING("Test");
@@ -214,7 +214,7 @@ TEST_F(TestAssembler_v2, EqualOperator) {
         ASSERT_EQ(token1, token2);
         ASSERT_NE(token1, token3);
         //Even though token1 and token3 are different by type, they are equal by value.
-        ASSERT_EQ(token1.get<std::string>(), token3.get<std::string>());
+        ASSERT_EQ(token1.getString(), token3.getString());
     }
 }
 

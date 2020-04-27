@@ -23,9 +23,9 @@ bool Instruction::ConsumeLabels(LabelMap& label_map, uint16_t address) {
     bool label_present = false;
     auto it = mTokenDeque.begin();
     while(it != mTokenDeque.end() && it->getType() == TokenType::Label) {
-        const auto& label_str = it->get<std::string>();
+        const auto& label_str = it->get<cx::string>();
         if(address != 0 && label_map[label_str] != 0) {
-            throw std::logic_error("Duplicate label " + label_str + ".\n");
+            throw std::logic_error("Duplicate label " + std::string(label_str) + ".\n");
         }
         label_map[label_str] = address;
         label_present = true;
@@ -42,7 +42,7 @@ bool Instruction::ConsumeLabels(LabelMap& label_map, uint16_t address) {
 bool Instruction::ConsumeLabels(LabelMap& label_map, uint16_t address) {
     bool label_present = false;
     for (auto& label = front(); label.getType() == TokenType::Label; label = front()) {
-        const auto& label_str = label.get<std::string>();
+        const auto& label_str = label.getString();
         if(address != 0 && label_map[label_str] != 0) {
             throw std::logic_error("Duplicate label " + label_str + ".\n");
         }
@@ -140,7 +140,7 @@ std::vector<uint16_t> Instruction::GetMachineCode(const LabelMap& label_map) con
         case POP::BLKW:
             return std::vector<uint16_t>((*this)[1].get<int>(), {back().get<uint16_t>()});
         case POP::STRINGZ:
-            return std::vector<uint16_t>(back().get<std::string>().begin(), back().get<std::string>().end());
+            return std::vector<uint16_t>(back().get<cx::string>().begin(), back().get<cx::string>().end());
         case POP::ORIG:
         case POP::END:
             return std::vector<uint16_t>();
@@ -158,7 +158,7 @@ uint16_t Instruction::GetAddressIncrement() const {
     case TokenType::PseudoOp:
         switch(front().get<POP::Type>()) {
         case POP::STRINGZ:
-            return back().get<std::string>().length() + 1; //remember the NUL character
+            return back().get<cx::string>().length() + 1; //remember the NUL character
         case POP::BLKW:
             return (*this)[1].get<int>();
         case POP::ORIG: case POP::END:

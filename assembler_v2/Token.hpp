@@ -42,6 +42,7 @@ public:
             static_assert(cx::fail_v<T>, "Invalid get<> template type.");
         }
     }
+    std::string getString() const { return std::string(get<cx::string>()); }
 
     /*********************************/
     /*         OPERATORS             */

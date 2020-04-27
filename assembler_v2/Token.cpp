@@ -21,7 +21,7 @@ Token::Token(const std::string& token) : mToken(token) {
         mValue = search->second.second;
     } else if (std::regex_match(token, label_match, string_regex)) {
         mType = TokenType::String;
-        mValue = label_match[1].str();
+        mValue.emplace<cx::string>(label_match[1].str());
     } else if (std::regex_match(token, label_match, num_regex)) {
         mType = TokenType::Number;
         const int base = (token.front() == '#') ? 10 : 16;
@@ -29,7 +29,7 @@ Token::Token(const std::string& token) : mToken(token) {
         mValue = std::stoi(label_match[1].str(), 0, base);
     } else if (std::regex_match(token, label_match, label_regex)) {
         mType = TokenType::Label;
-        mValue = label_match[0].str();
+        mValue.emplace<cx::string>(label_match[0].str());
     } else {
         mType = TokenType::Undefined;
     }

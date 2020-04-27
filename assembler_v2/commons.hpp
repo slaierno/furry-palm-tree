@@ -7,6 +7,8 @@
 #include <algorithm>
 #include "../lc3-hw.hpp"
 #include "cx.hpp"
+#include "cx_map.hpp"
+#include "cx_string.hpp"
 
 /*********************************/
 /*            MACROS             */
@@ -120,7 +122,7 @@ using TokenValueGeneric = std::variant<OP::Type,
                                        POP::Type, 
                                        int, 
                                        String>;
-using TokenValue = TokenValueGeneric<std::string>;
+using TokenValue = TokenValueGeneric<cx::string>;
 
 /*********************************/
 /*            MAPS               */
