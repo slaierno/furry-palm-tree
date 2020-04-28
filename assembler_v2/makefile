@@ -22,7 +22,7 @@ TEST_OBJ = main_test.o \
 		  $(OBJS)
 ASM_PROG = fpt-asm.exe
 TEST_PROG = fpt-asm_test.exe
-ASM_CPPFLAGS = -g -std=gnu++20 -Wall -Werror -Wfatal-errors \
+ASM_CPPFLAGS = -g -O0 -std=gnu++20 -Wall -Werror -Wfatal-errors \
 			   -D_NO_W32_PSEUDO_MODIFIERS -pthread \
                -isystem $(VM_DIR)/googletest/googletest/include \
 			   -I$(INCLUDE_DIR)

@@ -10,49 +10,32 @@ Instruction::Instruction(std::string str, unsigned line_number) : mString(str), 
                 str.find_first_of(whitespace); 
     };
     for(size_t next_pos = 0;
-                next_pos != std::string::npos;
-                next_pos = str.find_first_not_of(whitespace, find_end_pos())) {
+               next_pos != std::string::npos;
+               next_pos = str.find_first_not_of(whitespace, find_end_pos())) {
         str = str.substr(next_pos);
-        if(auto token_str = str.substr(0, find_end_pos());
-                !token_str.empty())
-            mTokenDeque.emplace_back(token_str);
+        if(auto token_str = str.substr(0, find_end_pos()); !token_str.empty()) {
+            if (const auto& back = mTokenDeque.emplace_back(token_str); back.getType() != TokenType::Label) {
+                mFirstNonLabelIndex = std::min(mFirstNonLabelIndex, mTokenDeque.size() - 1);
+            }
+        }
     }
+    if(mTokenDeque.empty()) mFirstNonLabelIndex = 0;
 }
 
-bool Instruction::ConsumeLabels(LabelMap& label_map, uint16_t address) {
+bool Instruction::FillLabelMap(LabelMap& label_map, uint16_t address) const {
     bool label_present = false;
-    auto it = mTokenDeque.begin();
-    while(it != mTokenDeque.end() && it->getType() == TokenType::Label) {
+    for(auto it = mTokenDeque.begin();
+        it != std::next(mTokenDeque.begin(), mFirstNonLabelIndex);
+        it++) {
         const auto& label_str = it->get<cx::string>();
         if(address != 0 && label_map[label_str] != 0) {
             throw std::logic_error("Duplicate label " + std::string(label_str) + ".\n");
         }
         label_map[label_str] = address;
         label_present = true;
-        ++it;
-    }
-    mTokenDeque.erase(mTokenDeque.begin(), it);
-    return label_present;
-}
-
-#if 0
-// OLD VERSION
-// This gives a segfault...don't know why
-
-bool Instruction::ConsumeLabels(LabelMap& label_map, uint16_t address) {
-    bool label_present = false;
-    for (auto& label = front(); label.getType() == TokenType::Label; label = front()) {
-        const auto& label_str = label.getString();
-        if(address != 0 && label_map[label_str] != 0) {
-            throw std::logic_error("Duplicate label " + label_str + ".\n");
-        }
-        label_map[label_str] = address;
-        pop_front();
-        label_present = true;
     }
     return label_present;
 }
-#endif
 
 constexpr cx::map<OP::Type, uint16_t, 8> br_to_cc {
     {OP::BR,    0b111},
@@ -86,25 +69,36 @@ template <const OP::Type op> uint16_t buildInstruction(const Instruction& tokens
         [[maybe_unused]] constexpr auto get_num = [](const Token& tkn, const unsigned n) {
             return tkn.get<int>() & 0xFFFF >> (16 - n);
         };
-        if constexpr (0x0000800 & opbit) off_bits = 16;
+        if constexpr (0x0000800 & opbit) inst |= get_num(tokens.rget(1), 16); //TRAP
         if constexpr (0x0000004 & opbit) off_bits = 11;
         if constexpr (0x007C7F8 & opbit) off_bits = 9;
         if constexpr (0x0C00000 & opbit) off_bits = 6;
         if constexpr (0x8300000 & opbit) off_bits = 5;
         if constexpr (0x7000000 & opbit) off_bits = 4;
-        if constexpr (0x8300000 & opbit) if (tokens.back().getType() == TokenType::Number) inst |= 1 << 5; 
+        if constexpr (0x8300000 & opbit) if (tokens.rget(3).getType() == TokenType::Number) inst |= 1 << 5;
         if constexpr (0x2000000 & opbit) inst |= 0b01 << 4;
         if constexpr (0x4000000 & opbit) inst |= 0b11 << 4;
         if constexpr (0x0080000 & opbit) inst |= 0x3F;
-        if constexpr (0xFFFC000 & opbit) r1 = get_num(tokens[1], 3); 
+        if constexpr (0xFFFC000 & opbit) r1 = get_num(tokens.rget(1), 3);
         if constexpr (0x00007F8 & opbit) r1 = br_to_cc[op]; 
         if constexpr (0x0000004 & opbit) r1 = 4;
         if constexpr (0x0000001 & opbit) r2 = 7;
-        if constexpr (0xFF80000 & opbit) r2 = get_num(tokens[2], 3); 
-        if constexpr (0x0003000 & opbit) r2 = get_num(tokens[1], 3); 
+        if constexpr (0xFF80000 & opbit) r2 = get_num(tokens.rget(2), 3);
+        if constexpr (0x0003000 & opbit) r2 = get_num(tokens.rget(1), 3);
         if constexpr (0xFFFF7FD & opbit) inst |= r1 << 9 | r2 << 6;
-        if constexpr (0x0000FFC & opbit) inst |= get_num(tokens[1], off_bits);
-        if constexpr (0x007C000 & opbit) inst |= get_num(tokens[2], off_bits);
+        if constexpr (0x007C7FC & opbit) {
+            if (const auto& it = label_map.find(tokens.rback().getString());
+                            it != label_map.end() && it->second != 0) {
+                int16_t label_off = (int16_t)(it->second - tokens.GetAddress()),
+                              min = -(1 << (off_bits - 1)),
+                              max =  (1 << (off_bits - 1)) - 1;
+                if(label_off < min || label_off > max)
+                    throw std::logic_error("Label " + it->first + " too far!");
+                return label_off & 0xFFFF >> (16 - off_bits);
+            } else {
+                throw std::logic_error("Label " + it->first + " not found");
+            }
+        }
         if constexpr (0xFF00000 & opbit) inst |= get_num(tokens[3], off_bits);
         return inst;
     }
@@ -118,24 +112,14 @@ uint16_t (*inst_table[OP::COUNT])(const Instruction&, const LabelMap&) = {
 
 std::vector<uint16_t> Instruction::GetMachineCode(const LabelMap& label_map) const {
     if (empty()) return std::vector<uint16_t>();
-    switch (front().getType()) {
-    case TokenType::Label: {
-        //remove the label and call function again
-        //TODO this should not happen...
-        Instruction inst_cpy = *this;
-        LabelMap label_map_cpy = label_map;
-        inst_cpy.ConsumeLabels(label_map_cpy);
-        //label_map_cpy gets discarded, we need to use the one provided
-        //as an argument and keep any undefined label error
-        return inst_cpy.GetMachineCode(label_map);
-    }
+    switch (rfront().getType()) {
     case TokenType::Instruction: {
-        auto opcode = front().get<OP::Type>();
+        auto opcode = rfront().get<OP::Type>();
         uint16_t inst = inst_table[opcode](*this, label_map);
         return std::vector<uint16_t>{inst};
     }
     case TokenType::PseudoOp:
-        switch(front().get<POP::Type>()) {
+        switch(rfront().get<POP::Type>()) {
         case POP::FILL:
         case POP::BLKW:
             return std::vector<uint16_t>((*this)[1].get<int>(), {back().get<uint16_t>()});
@@ -153,22 +137,27 @@ std::vector<uint16_t> Instruction::GetMachineCode(const LabelMap& label_map) con
     }
 }
 
-uint16_t Instruction::GetAddressIncrement() const {
-    switch (front().getType()) {
+uint16_t Instruction::SetAddress(uint16_t address) {
+    switch (rfront().getType()) {
     case TokenType::PseudoOp:
-        switch(front().get<POP::Type>()) {
+        switch(rfront().get<POP::Type>()) {
         case POP::STRINGZ:
-            return back().get<cx::string>().length() + 1; //remember the NUL character
+            address += back().get<cx::string>().length() + 1; //remember the NUL character
+            break;
         case POP::BLKW:
-            return (*this)[1].get<int>();
-        case POP::ORIG: case POP::END:
-            return 0;
-        default:
-            return 1;
+            address += (*this)[1].get<int>();
+            break;
+        case POP::FILL:
+            address++;
+            break;
+        default:;
         }
+        break;
     case TokenType::Instruction:
-        return 1;
+        address++;
+        break;
     default:
-        return 0; //TODO throw here
+        throw std::logic_error("Unexpected"); //TODO throw here
     }
+    return mInstAddress = address;
 }

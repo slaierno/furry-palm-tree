@@ -1,10 +1,10 @@
-    #pragma once
+#pragma once
 
 #include <string>
 #include "commons.hpp"
 
 class Token {
-    std::string mToken;
+    cx::string mToken;
     enum TokenType mType;
     TokenValue mValue;
 
@@ -12,8 +12,9 @@ public:
     /*********************************/
     /*          CTOR/DTOR            */
     /*********************************/
-    Token(const enum TokenType type, TokenValue val) : mType(type), mValue(val) {}
-    Token(const std::string& token);
+    constexpr Token(const enum TokenType type, const TokenValue& val) : mType(type), mValue(val) {}
+    constexpr Token(const std::pair<const enum TokenType, const TokenValue>& pair) : Token(pair.first, pair.second) {}
+              Token(const std::string& token);
 
     /*********************************/
     /*          Utilities            */
@@ -27,9 +28,6 @@ public:
     //TODO should give an error if mType is Undefined or does not match with T
     template<typename T>
     constexpr T get() const {
-        // if constexpr(std::is_same_v<T, std::string>) {
-        //     return std::string(std::get<std::string_view>(mValue));
-        // } else 
         if constexpr(cx::holds_variant_v<T, TokenValue>) {
             //TODO throw something for type mismatch
             return std::get<T>(mValue);
@@ -58,11 +56,18 @@ public:
     }
 };
 
-namespace TokenConsts{
-#define ENUM_MACRO(X) const Token X = Token(TokenType::Instruction, OP::X);
-OP_TYPES
-#undef ENUM_MACRO
-#define ENUM_MACRO(X) const Token X = Token(TokenType::PseudoOp, POP::X);
-POP_TYPES
-#undef ENUM_MACRO
+constexpr Token operator"" _tkn(const char* str, size_t size) {
+    return Token(
+        cx::map<cx::static_string, std::pair<enum TokenType, TokenValue>, OP::COUNT + POP::COUNT + REG::COUNT> {
+        #define ENUM_MACRO(X) {#X, {TokenType::Instruction, OP::X}},
+            OP_TYPES
+        #undef ENUM_MACRO
+        #define ENUM_MACRO(X) {"."#X, {TokenType::PseudoOp, POP::X}},
+            POP_TYPES
+        #undef ENUM_MACRO
+        #define ENUM_MACRO(X) {#X, {TokenType::Register, REG::X}},
+            REG_TYPES
+        #undef ENUM_MACRO
+        }[cx::static_string(str, size)]
+    );
 }

@@ -65,16 +65,16 @@ void assemble_step1(std::istream& asm_file, Program& program) {
  */
 
 void assemble_step2(const Program& program, LabelMap& label_map) {
-    for(auto inst : program) {
+    for(const auto& inst : program) {
         constexpr auto REG = TokenType::Register;
         constexpr auto NUM = TokenType::Number;
         constexpr auto LAB = TokenType::Label;
         constexpr auto STR = TokenType::String;
 
+        inst.FillLabelMap(label_map);
         bool result = false;
-        inst.ConsumeLabels(label_map);
-
-        switch(auto& op = inst.front(); op.getType()) {
+        const auto& op = inst.rfront();
+        switch(op.getType()) {
         case TokenType::Instruction: {
             switch(op.get<OP::Type>()) {
             case OP::ADD: case OP::AND: case OP::XOR:
@@ -127,9 +127,9 @@ void assemble_step2(const Program& program, LabelMap& label_map) {
         }
         if (!result) {
             //TODO create proper error type
-            throw std::logic_error(error_string(inst.front()));
+            throw std::logic_error(error_string(op));
         }
-        if (auto imm = inst.back(), op = inst.front(); 
+        if (auto imm = inst.rback();
             imm.getType() == TokenType::Number && !op.checkRange(imm)) {
             //TODO create proper error type
             throw std::logic_error("Wrong range!\n");
@@ -149,32 +149,31 @@ void assemble_step2(const Program& program, LabelMap& label_map) {
  * TODO: this step can be merged with step 4
  */
 
-void assemble_step3(const Program& program, LabelMap& label_map) {
+void assemble_step3(Program& program, LabelMap& label_map) {
     // First instruction MUST be .orig ADDR
     auto first_inst = program.front();
-    first_inst.ConsumeLabels(label_map);
-    if (first_inst.front() != TokenConsts::ORIG) {
+    first_inst.FillLabelMap(label_map);
+    if (first_inst.rfront() != ".ORIG"_tkn) {
         throw std::logic_error("First instruction must be a valid .ORIG");
     }
-    uint16_t address = first_inst.back().get<int>();
+    uint16_t address = first_inst.rback().get<int>();
 
     bool end_found = false;
-    for(auto inst : program) {
+    for(auto& inst : program) {
         if (end_found) {
             throw std::logic_error("Everything after .end will be ignored");
         } else if (address > 0xFDFF) {
             throw std::logic_error("Out of memory!");
-        }
-        else {
-            inst.ConsumeLabels(label_map, address);
-            if(!inst.empty()) {
-                end_found = inst.front() == TokenConsts::END;
-                if (const auto& label = inst.back(); 
+        } else {
+            inst.FillLabelMap(label_map, address);
+            if(!inst.rempty()) {
+                end_found = inst.rfront() == ".END"_tkn;
+                if (const auto& label = inst.rback();
                     label.getType() == TokenType::Label &&
                     label_map.find(label.get<cx::string>()) == label_map.end()) {
                     throw std::logic_error("Label " + label.getString() + " not found!");
                 }
-                address+=inst.GetAddressIncrement();
+                address = inst.SetAddress(address);
             }
         }
     }

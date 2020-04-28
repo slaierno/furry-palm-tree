@@ -218,9 +218,25 @@ TEST_F(TestAssembler_v2, EqualOperator) {
     }
 }
 
-TEST_F(TestAssembler_v2, Constants) {
-    EXPECT_EQ(TokenConsts::ORIG, Token(".ORIG"));
-    EXPECT_EQ(TokenConsts::END, Token(".END"));
+TEST_F(TestAssembler_v2, TokenLiterals) {
+    #define ENUM_MACRO(X) \
+        static_assert(#X ## _tkn.getType() == TokenType::Instruction); \
+        static_assert(#X ## _tkn.get<OP::Type>() == OP::X); \
+        EXPECT_EQ(#X ## _tkn, Token(#X));
+    OP_TYPES
+    #undef ENUM_MACRO
+    #define ENUM_MACRO(X) \
+        static_assert("."#X ## _tkn.getType() == TokenType::PseudoOp); \
+        static_assert("."#X ## _tkn.get<POP::Type>() == POP::X); \
+        EXPECT_EQ("."#X ## _tkn, Token("."#X));
+    POP_TYPES
+    #undef ENUM_MACRO
+    #define ENUM_MACRO(X) \
+        static_assert(#X ## _tkn.getType() == TokenType::Register); \
+        static_assert(#X ## _tkn.get<REG::Type>() == REG::X); \
+        EXPECT_EQ(#X ## _tkn, Token(#X));
+    REG_TYPES
+    #undef ENUM_MACRO
 }
 
 TEST_F(TestAssembler_v2, LineTrimmer) {
@@ -292,15 +308,16 @@ TEST_F(TestAssembler_v2, AssemblerStep2Utils) {
     LabelMap label_map;
     Instruction inst("PIPPO PLUTO PAPERINO ADD x3000 PIPPO");
 
-    /* The two following asserts are somehow broken, because the first token is skipped.
-       Usually, the first token should be TokenType::Instruction or TokenType::PseudoOp,
-        but here we test instruction_check() for Instrution with a different first token.
+    /* The two following asserts are somehow broken, because labels an the
+     * subsequent first token are skipped. Usually, the first token should be
+     * TokenType::Instruction or TokenType::PseudoOp, but here we test
+     * instruction_check() for Instruction with a different first token.
      */
     ASSERT_FALSE((check_arguments<TokenType::Label, TokenType::Number>(inst)));
-    ASSERT_TRUE((check_arguments<TokenType::Label, TokenType::Label, TokenType::Instruction, TokenType::Number, TokenType::Label>(inst)));
+    ASSERT_TRUE((check_arguments<TokenType::Number, TokenType::Label>(inst)));
 
-    ASSERT_TRUE(inst.ConsumeLabels(label_map));
-    ASSERT_FALSE(Instruction("").ConsumeLabels(label_map));
+    ASSERT_TRUE(inst.FillLabelMap(label_map));
+    ASSERT_FALSE(Instruction("").FillLabelMap(label_map));
     ASSERT_EQ(3, label_map.size());
     ASSERT_NE(label_map.end(), label_map.find("PIPPO"));
     ASSERT_NE(label_map.end(), label_map.find("PLUTO"));

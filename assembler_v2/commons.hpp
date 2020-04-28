@@ -104,6 +104,7 @@ namespace POP {
 }
 
 /* List of addressable registers */
+/* enum->int mapping shall be preserved */
 namespace REG { 
     enum Type {
         REG_TYPES
@@ -171,81 +172,6 @@ static std::map<std::string, std::pair<TokenType, TokenValue>, decltype(case_ins
 #undef ENUM_MACRO
 }};
 
-// TODO these can be vectors, they would be much more efficient but...
-// Yes, they are NOT maps, but we are keeping names omogeneous!
-
-/* Given N bits accepted by an [pseudo-]instruction, ranges are the
- * intervals [-2^(N-1),2^N-1]. 
- *   E.g., for 5 bits, we have [-16,31]. 
- * The compiler will trust the programmer, which should know that any 
- * number >2^(N-1)-1 will be sign extended.
- *   E.g. ADD R0 R1 #19
- *        #19 is going to be interpreted as 0b10011 and therefore
- *        the 5-bit sign-extension will make it -13 and the whole
- *        instruction will be R0:=R1-13
- * This is useful if the programmer wants to insert hex numbers,
- * which may be true with other instruction like .fill or .blkw
- *   E.g. MYLABEL .fill xFFF3
- *        MYLABEL will be filled with '1111 1111 1111 0011'.
- *        Writing:
- *          MYLABEL .fill x-D
- *          MYLABEL .fill #-13
- *        is going to be the same, but it may be counter-intuitive.
- *        Here the need to allow the extended range.
- * This choice is to make the compiler easier to write, but it
- * can be reverted.
- * 
- * EXCEPTIONS: 
- * - Shift operation will not accept negative values since they would make no sense.
- * - .orig will accept only positive values in the range [0x3000,0xFDFF]
- *
- * TODO consider accepting number in the range [2^(N-1), 2^N-1]
- *      only if they are in hex format.
- */
-
-// This will always result in a false inclusion test
-//   since ∀x,y∈ℤ,x>y ∄z∈ℤ|x<z<y
-constexpr std::pair INVALID_RANGE(1,-1);
-
-template<typename T>
-constexpr std::pair<int, int> RangeMap(const T op) { return INVALID_RANGE; }
-
-constexpr std::pair<int, int> RangeMap(const OP::Type op) {
-    switch(op) {
-    case OP::ADD:
-    case OP::AND:
-    case OP::XOR:
-        //5 bits
-        return std::pair(-16, 31);
-    case OP::LDR:
-    case OP::STR:
-        //7 bits
-        return std::pair(-32, 63);
-    case OP::RSHFA:
-    case OP::RSHFL:
-    case OP::LSHF:
-        return std::pair(0,15);
-    default:
-        return INVALID_RANGE;
-    }
-}
-
-constexpr std::pair<int, int> RangeMap(const POP::Type pop) {
-    switch(pop) {
-    case POP::BLKW:
-    case POP::FILL:
-        return std::pair(-0x7FFF, 0xFFFF);
-    case POP::ORIG:
-        return std::pair(0x3000, 0xFDFF);
-    default:
-        return INVALID_RANGE;
-    }
-}
-
-constexpr std::pair<int, int> RangeMap(const TokenValue& value) {
-    return std::visit([](auto&& arg) { return RangeMap(arg); }, value);
-}
-
 constexpr static char whitespace[] = " \t";
 constexpr static char comment_sep[] = ";";
 
@@ -288,7 +214,7 @@ enum {
 };
 
 /* Array which associates every assembly instruction with its binary opcode */
-/* Traps are not here, of course, since the should translate to TRAP instrunctions */
+/* Traps are not here, of course, since they should translate to TRAP instrunctions */
 #define ENUM_MACRO(X) OP_ ## X,
 constexpr std::array<uint16_t, OP::COUNT> opEnumToOpcodeMap {
     OP_TYPES
