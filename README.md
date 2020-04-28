@@ -4,7 +4,7 @@ Furry Palm Tree (FPT) is a VM for a LC3-based computer with video hardware. It i
 ## Building
 
 Requirements:
-* Any suitable C++17 compiler.
+* A cutting-edge C++20 compiler.
 * A version of `make`.
 * [Google Test](https://github.com/google/googletest)
 
