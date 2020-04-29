@@ -28,6 +28,10 @@ Use *camel case* and *snake case* for parameters:
   ```C++
   void MyObect::myMethod(int my_par) {}
   ```
+  *Exception:* when defining function aliases for member containers methods keep the container methods' naming convention. E.g., STL containers use snake case:
+  ```C++
+  auto MyObject::push_back = mContainer.push_back;
+  ```
 * **Members**  
 Use *camel case* and start every private member with an `m`:
   ```C++

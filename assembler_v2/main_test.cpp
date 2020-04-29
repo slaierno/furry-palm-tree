@@ -251,8 +251,8 @@ TEST_F(TestAssembler_v2, LineTrimmer) {
 TEST_F(TestAssembler_v2, Instruction) {
     const std::string garbage = "   \t \t   AND PIPPO #12093800 \tx938ff  \"this is a stringòàùè+\" R0 R1 \t  \t ; THIS IS    GOìnG t0 be r0 r1 r2 ignored";
     Instruction instruction(garbage, 711);
-    ASSERT_EQ(garbage, instruction.GetOGString());
-    ASSERT_EQ(711, instruction.GetLineNumber());
+    ASSERT_EQ(garbage, instruction.getOGString());
+    ASSERT_EQ(711, instruction.getLineNumber());
     ASSERT_EQ(7, instruction.size());
     ASSERT_EQ(Token("and"), instruction[0]);
     ASSERT_EQ(Token("PIPPO"), instruction[1]);
@@ -265,8 +265,8 @@ TEST_F(TestAssembler_v2, Instruction) {
 
     const std::string single = ".end";
     instruction = Instruction(single, 712);
-    ASSERT_EQ(single, instruction.GetOGString());
-    ASSERT_EQ(712, instruction.GetLineNumber());
+    ASSERT_EQ(single, instruction.getOGString());
+    ASSERT_EQ(712, instruction.getLineNumber());
     ASSERT_EQ(1, instruction.size());
     ASSERT_EQ(Token(".end"), instruction[0]);
 }
@@ -316,8 +316,8 @@ TEST_F(TestAssembler_v2, AssemblerStep2Utils) {
     ASSERT_FALSE((check_arguments<TokenType::Label, TokenType::Number>(inst)));
     ASSERT_TRUE((check_arguments<TokenType::Number, TokenType::Label>(inst)));
 
-    ASSERT_TRUE(inst.FillLabelMap(label_map));
-    ASSERT_FALSE(Instruction("").FillLabelMap(label_map));
+    ASSERT_TRUE(inst.fillLabelMap(label_map));
+    ASSERT_FALSE(Instruction("").fillLabelMap(label_map));
     ASSERT_EQ(3, label_map.size());
     ASSERT_NE(label_map.end(), label_map.find("PIPPO"));
     ASSERT_NE(label_map.end(), label_map.find("PLUTO"));

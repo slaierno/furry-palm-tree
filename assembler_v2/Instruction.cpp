@@ -22,7 +22,7 @@ Instruction::Instruction(std::string str, unsigned line_number) : mString(str), 
     if(mTokenDeque.empty()) mFirstNonLabelIndex = 0;
 }
 
-bool Instruction::FillLabelMap(LabelMap& label_map, uint16_t address) const {
+bool Instruction::fillLabelMap(LabelMap& label_map, uint16_t address) const {
     bool label_present = false;
     for(auto it = mTokenDeque.begin();
         it != std::next(mTokenDeque.begin(), mFirstNonLabelIndex);
@@ -57,7 +57,7 @@ constexpr cx::map<OP::Type, uint16_t, 6> trap_to_vec {
     {OP::HALT,  0x25},
 };
 
-template <const OP::Type op> uint16_t buildInstruction(const Instruction& tokens, const LabelMap& label_map) {
+template <const OP::Type op> uint16_t build_instruction(const Instruction& tokens, const LabelMap& label_map) {
     constexpr uint64_t opbit = 1LL << op;
     constexpr uint16_t opcode = opEnumToOpcodeMap[op];
 
@@ -89,7 +89,7 @@ template <const OP::Type op> uint16_t buildInstruction(const Instruction& tokens
         if constexpr (0x007C7FC & opbit) {
             if (const auto& it = label_map.find(tokens.rback().getString());
                             it != label_map.end() && it->second != 0) {
-                int16_t label_off = (int16_t)(it->second - tokens.GetAddress()),
+                int16_t label_off = (int16_t)(it->second - tokens.getAddress()),
                               min = -(1 << (off_bits - 1)),
                               max =  (1 << (off_bits - 1)) - 1;
                 if(label_off < min || label_off > max)
@@ -104,13 +104,13 @@ template <const OP::Type op> uint16_t buildInstruction(const Instruction& tokens
     }
 }
 
-#define ENUM_MACRO(X) buildInstruction<OP::X>,
+#define ENUM_MACRO(X) build_instruction<OP::X>,
 uint16_t (*inst_table[OP::COUNT])(const Instruction&, const LabelMap&) = {
     OP_TYPES
 };
 #undef ENUM_MACRO
 
-std::vector<uint16_t> Instruction::GetMachineCode(const LabelMap& label_map) const {
+std::vector<uint16_t> Instruction::getMachineCode(const LabelMap& label_map) const {
     if (empty()) return std::vector<uint16_t>();
     switch (rfront().getType()) {
     case TokenType::Instruction: {
@@ -137,7 +137,7 @@ std::vector<uint16_t> Instruction::GetMachineCode(const LabelMap& label_map) con
     }
 }
 
-uint16_t Instruction::SetAddress(uint16_t address) {
+uint16_t Instruction::setAddress(uint16_t address) {
     switch (rfront().getType()) {
     case TokenType::PseudoOp:
         switch(rfront().get<POP::Type>()) {

@@ -14,17 +14,17 @@ class Instruction {
 public:
     Instruction(std::string str, unsigned line_number = 0);
 
-    std::vector<uint16_t> GetMachineCode(const LabelMap&) const;
+    std::vector<uint16_t> getMachineCode(const LabelMap&) const;
 
-    auto GetLineNumber() const { return mLineNumber; }
-    auto   GetOGString() const { return mString; }
-    auto    GetAddress() const { return mInstAddress; };
+    auto getLineNumber() const { return mLineNumber; }
+    auto   getOGString() const { return mString; }
+    auto    getAddress() const { return mInstAddress; };
 
     /* Fills existing label in LabelMap with address. */
-    bool FillLabelMap(LabelMap&, uint16_t) const;
+    bool fillLabelMap(LabelMap&, uint16_t) const;
     /* Put non-existing label in LabelMap. Address is set at 0. */
-    bool FillLabelMap(LabelMap& map) const { return FillLabelMap(map, 0); };
-    uint16_t SetAddress(uint16_t);
+    bool fillLabelMap(LabelMap& map) const { return fillLabelMap(map, 0); };
+    uint16_t setAddress(uint16_t);
 
           auto  empty() const { return mTokenDeque.empty(); }
           auto   size() const { return mTokenDeque.size();  }

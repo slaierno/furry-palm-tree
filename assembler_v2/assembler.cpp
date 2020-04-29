@@ -71,7 +71,7 @@ void assemble_step2(const Program& program, LabelMap& label_map) {
         constexpr auto LAB = TokenType::Label;
         constexpr auto STR = TokenType::String;
 
-        inst.FillLabelMap(label_map);
+        inst.fillLabelMap(label_map);
         bool result = false;
         const auto& op = inst.rfront();
         switch(op.getType()) {
@@ -152,7 +152,7 @@ void assemble_step2(const Program& program, LabelMap& label_map) {
 void assemble_step3(Program& program, LabelMap& label_map) {
     // First instruction MUST be .orig ADDR
     auto first_inst = program.front();
-    first_inst.FillLabelMap(label_map);
+    first_inst.fillLabelMap(label_map);
     if (first_inst.rfront() != ".ORIG"_tkn) {
         throw std::logic_error("First instruction must be a valid .ORIG");
     }
@@ -165,7 +165,7 @@ void assemble_step3(Program& program, LabelMap& label_map) {
         } else if (address > 0xFDFF) {
             throw std::logic_error("Out of memory!");
         } else {
-            inst.FillLabelMap(label_map, address);
+            inst.fillLabelMap(label_map, address);
             if(!inst.rempty()) {
                 end_found = inst.rfront() == ".END"_tkn;
                 if (const auto& label = inst.rback();
@@ -173,7 +173,7 @@ void assemble_step3(Program& program, LabelMap& label_map) {
                     label_map.find(label.get<cx::string>()) == label_map.end()) {
                     throw std::logic_error("Label " + label.getString() + " not found!");
                 }
-                address = inst.SetAddress(address);
+                address = inst.setAddress(address);
             }
         }
     }
