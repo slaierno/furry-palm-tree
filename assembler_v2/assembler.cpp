@@ -6,6 +6,7 @@
 #include "errors.hpp"
 #include "commons.hpp"
 #include "assembler.hpp"
+#include "DebugSymbols.hpp"
 
 /*********************************/
 /*       ASSEMBLER STEPS         */
@@ -192,8 +193,25 @@ void assemble_step3(Program& program, LabelMap& label_map) {
  *   Binary search through lower_bound or similar function will work fine.
  */
 
-void assemble_step4(const Program& program, LabelMap& label_map, std::ofstream& out_file, std::ofstream& dbg_file) {
-
+void assemble_step4(const Program& program, const LabelMap& label_map, const std::string& out_filename, const std::string& dbg_filename) {
+    std::ofstream out_file, dbg_file;
+    out_file.open(out_filename, std::ios::binary | std::ios::out);
+    dbg_file.open(dbg_filename, std::ios::binary | std::ios::out);
+    DebugSymbols dbg_l;
+    for(const auto& inst : program) {
+        auto opcode_v = inst.getMachineCode(label_map);
+        assert(inst.getNextAddress() > inst.getAddress());
+        assert(opcode_v.size() == (unsigned)(inst.getNextAddress() - inst.getAddress()));
+        for(uint16_t addr = inst.getAddress(), v_idx = 0; addr < inst.getNextAddress(); addr++, v_idx++) {
+            auto& opcode = opcode_v[v_idx];
+            uint16_t big_endian_word = opcode >> 8 | opcode << 8;
+            out_file.write(reinterpret_cast<const char*>(&big_endian_word), 2);
+            dbg_l.emplace_back(addr, dbg_filename, inst.getLineNumber());
+        }
+    }
+    out_file.close();
+    dbg_l.serialize(dbg_file);
+    dbg_file.close();
 }
 
 void assemble(const std::string& in_filename, const std::string& out_filename, const std::string& dbg_filename) {
@@ -202,19 +220,13 @@ void assemble(const std::string& in_filename, const std::string& out_filename, c
     if(asm_file.is_open()) {
         Program program;
         assemble_step1(asm_file, program);
+        asm_file.close();
 
         LabelMap label_map;
         assemble_step2(program, label_map);
 
         assemble_step3(program, label_map);
 
-        std::ofstream out_file, dbg_file;
-        out_file.open(out_filename, std::ios::binary | std::ios::out);
-        dbg_file.open(dbg_filename, std::ios::binary | std::ios::out);
-        assemble_step4(program, label_map, out_file, dbg_file);
-        
-        out_file.close();
-        dbg_file.close();
-        asm_file.close();
+        assemble_step4(program, label_map, out_filename, dbg_filename);
     }
 }

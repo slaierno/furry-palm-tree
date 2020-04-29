@@ -89,7 +89,7 @@ template <const OP::Type op> uint16_t build_instruction(const Instruction& token
         if constexpr (0x007C7FC & opbit) {
             if (const auto& it = label_map.find(tokens.rback().getString());
                             it != label_map.end() && it->second != 0) {
-                int16_t label_off = (int16_t)(it->second - tokens.getAddress()),
+                int16_t label_off = (int16_t)(it->second - tokens.getNextAddress()),
                               min = -(1 << (off_bits - 1)),
                               max =  (1 << (off_bits - 1)) - 1;
                 if(label_off < min || label_off > max)
@@ -138,6 +138,7 @@ std::vector<uint16_t> Instruction::getMachineCode(const LabelMap& label_map) con
 }
 
 uint16_t Instruction::setAddress(uint16_t address) {
+    mInstAddress = address;
     switch (rfront().getType()) {
     case TokenType::PseudoOp:
         switch(rfront().get<POP::Type>()) {
@@ -159,5 +160,5 @@ uint16_t Instruction::setAddress(uint16_t address) {
     default:
         throw std::logic_error("Unexpected"); //TODO throw here
     }
-    return mInstAddress = address;
+    return mNextAddress = address;
 }

@@ -1,5 +1,6 @@
 CC = g++-10
 INCLUDE_DIR = ../include
+CX_DIR = $(INCLUDE_DIR)/cx
 VM_DIR = ..
 ASM_DEPS = \
 	Token.hpp \
@@ -8,11 +9,12 @@ ASM_DEPS = \
 	assembler.hpp \
 	assembler_test.hpp \
 	$(VM_DIR)/lc3-hw.hpp \
-	$(INCLUDE_DIR)/cx.hpp \
-	$(INCLUDE_DIR)/cx_string.hpp \
-	$(INCLUDE_DIR)/cx_vector.hpp \
-	$(INCLUDE_DIR)/cx_map.hpp \
-	$(INCLUDE_DIR)/cx_algorithm.hpp
+	$(CX_DIR)/cx.hpp \
+	$(CX_DIR)/cx_string.hpp \
+	$(CX_DIR)/cx_vector.hpp \
+	$(CX_DIR)/cx_map.hpp \
+	$(CX_DIR)/cx_algorithm.hpp \
+	$(INCLUDE_DIR)/DebugSymbols.hpp
 OBJS = Token.o \
        Instruction.o \
 	   assembler.o

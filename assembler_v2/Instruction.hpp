@@ -9,6 +9,7 @@ class Instruction {
     std::string mString;
     unsigned mLineNumber;
     uint16_t mInstAddress = 0;
+    uint16_t mNextAddress = 0;
     size_t mFirstNonLabelIndex = std::numeric_limits<size_t>::max();
 
 public:
@@ -16,9 +17,10 @@ public:
 
     std::vector<uint16_t> getMachineCode(const LabelMap&) const;
 
-    auto getLineNumber() const { return mLineNumber; }
-    auto   getOGString() const { return mString; }
-    auto    getAddress() const { return mInstAddress; };
+    auto  getLineNumber() const { return mLineNumber; }
+    auto    getOGString() const { return mString; }
+    auto     getAddress() const { return mInstAddress; };
+    auto getNextAddress() const { return mNextAddress; };
 
     /* Fills existing label in LabelMap with address. */
     bool fillLabelMap(LabelMap&, uint16_t) const;
