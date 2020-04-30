@@ -14,7 +14,8 @@ ASM_DEPS = \
 	$(CX_DIR)/cx_vector.hpp \
 	$(CX_DIR)/cx_map.hpp \
 	$(CX_DIR)/cx_algorithm.hpp \
-	$(INCLUDE_DIR)/DebugSymbols.hpp
+	$(INCLUDE_DIR)/DebugSymbols.hpp \
+	$(INCLUDE_DIR)/LabelMap.hpp
 OBJS = Token.o \
        Instruction.o \
 	   assembler.o

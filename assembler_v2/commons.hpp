@@ -6,9 +6,10 @@
 #include <variant>
 #include <algorithm>
 #include "../lc3-hw.hpp"
-#include "cx.hpp"
-#include "cx_map.hpp"
-#include "cx_string.hpp"
+#include "cx/cx.hpp"
+#include "cx/cx_map.hpp"
+#include "cx/cx_string.hpp"
+#include "LabelMap.hpp"
 
 /*********************************/
 /*            MACROS             */
@@ -187,9 +188,6 @@ inline std::string trim_line(std::string line) {
     }
     return line;
 }
-
-/* A LabelMap is a map where [key,value] == [label name, address location] */
-using LabelMap = std::map<std::string, uint16_t>;
 
 //Duplicate enums to map alias with HW opcode
 enum {
