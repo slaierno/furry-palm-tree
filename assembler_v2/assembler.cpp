@@ -202,11 +202,17 @@ void assemble_step4(const Program& program, const LabelMap& label_map, const std
         auto opcode_v = inst.getMachineCode(label_map);
         assert(inst.getNextAddress() > inst.getAddress());
         assert(opcode_v.size() == (unsigned)(inst.getNextAddress() - inst.getAddress()));
-        for(uint16_t addr = inst.getAddress(), v_idx = 0; addr < inst.getNextAddress(); addr++, v_idx++) {
-            auto& opcode = opcode_v[v_idx];
-            uint16_t big_endian_word = opcode >> 8 | opcode << 8;
-            out_file.write(reinterpret_cast<const char*>(&big_endian_word), 2);
-            dbg_l.emplace_back(addr, dbg_filename, inst.getLineNumber());
+        if(".ORIG"_tkn == inst.rfront()) {
+            uint16_t start_address = static_cast<uint16_t>(inst.rback().get<int>());
+            start_address = start_address >> 8 | start_address << 8;
+            out_file.write(reinterpret_cast<const char*>(&start_address), 2);
+        } else {
+            for(uint16_t addr = inst.getAddress(), v_idx = 0; addr < inst.getNextAddress(); addr++, v_idx++) {
+                auto& opcode = opcode_v[v_idx];
+                uint16_t big_endian_word = opcode >> 8 | opcode << 8;
+                out_file.write(reinterpret_cast<const char*>(&big_endian_word), 2);
+                dbg_l.emplace_back(addr, dbg_filename, inst.getLineNumber());
+            }
         }
     }
     out_file.close();
@@ -215,12 +221,10 @@ void assemble_step4(const Program& program, const LabelMap& label_map, const std
 }
 
 void assemble(const std::string& in_filename, const std::string& out_filename, const std::string& dbg_filename) {
-    std::ifstream asm_file;
-    asm_file.open(in_filename);
+    std::ifstream asm_file(in_filename);
     if(asm_file.is_open()) {
         Program program;
         assemble_step1(asm_file, program);
-        asm_file.close();
 
         LabelMap label_map;
         assemble_step2(program, label_map);
