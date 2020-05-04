@@ -3,6 +3,14 @@ project(furry_palm_tree VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Set compilers' warning level
+if (MSVC)
+    # warning level 4 and all warnings as errors
+    add_compile_options(/W4 /WX)
+else()
+    # lots of warnings and all warnings as errors
+    add_compile_options(-Wall -Wextra -Werror)
+endif()
 
 set(INCLUDE_DIR "include")
 # Set variable with every header file

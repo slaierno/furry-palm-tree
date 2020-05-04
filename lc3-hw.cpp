@@ -95,7 +95,7 @@ void restore_input_buffering()
 
 #endif
 
-void handle_interrupt(int signal)
+void handle_interrupt([[maybe_unused]] int signal)
 {
     restore_input_buffering();
     std::cout << std::endl;
