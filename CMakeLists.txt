@@ -12,38 +12,28 @@ else()
     add_compile_options(-Wall -Wextra -Werror)
 endif()
 
-set(INCLUDE_DIR "include")
+set(LIBS_DIR "libs")
+set(SRC_DIR "src")
+set(TEST_DIR "test")
+set(EXT_DIR "external")
 # Set variable with every header file
-set(HEADER_FILES 
-"${INCLUDE_DIR}/LabelMap.hpp"
-"${INCLUDE_DIR}/DebugSymbols.hpp"
-"${INCLUDE_DIR}/cx/cx_algorithm.hpp"
-"${INCLUDE_DIR}/cx/cx_map.hpp"
-"${INCLUDE_DIR}/cx/cx_string.hpp"
-"${INCLUDE_DIR}/cx/cx_vector.hpp"
-"${INCLUDE_DIR}/cx/cx.hpp"
-"lc3-hw.hpp"
-"lc3-debug.hpp"
-"lc3-video.hpp"
-"memory.hpp"
-"InputBuffer.hpp"
-)
+file(GLOB HEADER_FILES 
+    "${SRC_DIR}/*/*.hpp"
+    "${LIBS_DIR}/*/*.hpp")
 # Set variable with every cpp file except the main ones
-set(SRC_FILES
-"lc3-hw.cpp"
-"memory.cpp"
-)
+file(GLOB FPT_FILES "${SRC_DIR}/fpt/*.cpp")
+list(FILTER FPT_FILES EXCLUDE REGEX ".*main.cpp$")
 
 # Set executables' names and set their cpp files
 set(MAIN_EXE furry_palm_tree)
 set(TEST_EXE furry_palm_tree_test)
-add_executable(${MAIN_EXE} "main.cpp")
-add_executable(${TEST_EXE} "main_test.cpp")
+add_executable(${MAIN_EXE} "${SRC_DIR}/fpt/main.cpp")
+add_executable(${TEST_EXE} "${TEST_DIR}/fpt/main_test.cpp")
 
 # Set the project as a library linked by the main files
-add_library(SRC_LIB ${SRC_FILES})
-target_link_libraries(${MAIN_EXE} SRC_LIB)
-target_link_libraries(${TEST_EXE} SRC_LIB)
+add_library(FPT_LIB ${FPT_FILES})
+target_link_libraries(${MAIN_EXE} FPT_LIB)
+target_link_libraries(${TEST_EXE} FPT_LIB)
 
 # Set pthread
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -53,7 +43,7 @@ target_link_libraries(${TEST_EXE} Threads::Threads)
 
 # Set gtest
 # TODO gtest can be even built via CMake
-link_directories("googletest/lib")
+link_directories("external/googletest/mybuild/lib")
 target_link_libraries(${TEST_EXE} gtest)
 include(GoogleTest)
 enable_testing()
