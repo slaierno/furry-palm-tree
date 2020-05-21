@@ -5,7 +5,7 @@
 #include <array>
 #include <variant>
 #include <algorithm>
-#include "../lc3-hw.hpp"
+#include "fpt/lc3-hw.hpp"
 #include "cx/cx.hpp"
 #include "cx/cx_map.hpp"
 #include "cx/cx_string.hpp"
