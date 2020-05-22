@@ -5,13 +5,17 @@ Furry Palm Tree (FPT) is a VM for a LC3-based computer with video hardware. It i
 
 Requirements:
 * A cutting-edge C++20 compiler.
-* A version of `make`.
-* [Google Test](https://github.com/google/googletest)
+* CMake >= 3.0 or newer.
+* A version of `make` (MSVC has not been tested yet, but it *should* work with minimal effort).
 
 How to build:
 
-* `make release` build an executable capable of running the VM.
-* `make test` run the unit tests
-* `cd assembler && make all` build the assembler
-* `cd assembler && make test` test the assembler
-* Append `CC=<your-favourite-compiler>` if you do not want to use `gcc`
+* `mkdir build`
+* [optional if C++20 compiler is not the system default one]  
+`export CC=<your-c++20-compiler-path>`
+* `cmake ..`
+* `cmake --build . -j`
+* [optional]  
+`ctest`
+
+The binaries can be found in `build/[fpt, fpt-asm, fpt-asm_v2]
