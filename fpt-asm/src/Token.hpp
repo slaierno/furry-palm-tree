@@ -38,7 +38,7 @@ public:
 
     bool                   isNumber()                   const { return mType == TokenType::Number || mType == TokenType::HexNumber; }
     template<typename T> T get()                        const { return std::get<T>(mValue); }
-    const enum TokenType   getType()                    const { return mType; }
+    enum TokenType         getType()                    const { return mType; }
      int16_t               getNumValue(unsigned n = 16) const;
     uint16_t               getCondFlags()               const;
     

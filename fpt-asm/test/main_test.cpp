@@ -599,7 +599,7 @@ int16_t labelOffset(const std::string label) {
     return label_map[label] - inst_address;
 }
 TEST_F(TestAssembly, Program) {
-    auto filename = "test1.asm";
+    auto filename = FPT_DATA_DIR"/test/test1.asm";
 
     std::ifstream asm_file;
     asm_file.open(filename);

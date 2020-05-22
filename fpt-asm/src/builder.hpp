@@ -155,7 +155,7 @@ uint16_t assembleLine(TokenList token_list, std::string& ret_string) {
         return assembleLine(token_list, ret_string);
     case TokenType::Trap:
         trapToInstruction(token_list);
-        // intended fallthrough
+        [[fallthrough]];
     case TokenType::Instruction: {
         updateInstructionAddress();
         auto opcode = front().get<OP::Type>();

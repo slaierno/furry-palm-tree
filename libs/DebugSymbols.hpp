@@ -7,8 +7,8 @@
 
 struct DebugSymbol {
     uint16_t address;
-    std::filesystem::path file;
-    unsigned line;
+    std::filesystem::path file = "";
+    unsigned line = 0;
 
     friend std::istream& operator>> (std::istream& is,       DebugSymbol& dbg_s) { return is >> dbg_s.address >> dbg_s.file >> dbg_s.line; }
     friend std::ostream& operator<< (std::ostream& os, const DebugSymbol& dbg_s) { return os << dbg_s.address << dbg_s.file << dbg_s.line; }
