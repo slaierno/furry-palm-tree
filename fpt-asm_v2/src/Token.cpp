@@ -76,7 +76,7 @@ Token::Token(const std::string& token) : mToken(token) {
 constexpr std::pair INVALID_RANGE(1,-1);
 
 template<typename T>
-constexpr std::pair<int, int> RangeMap(const T op) { return INVALID_RANGE; }
+constexpr std::pair<int, int> RangeMap([[maybe_unused]] const T op) { return INVALID_RANGE; }
 
 constexpr std::pair<int, int> RangeMap(const OP::Type op) {
     switch(op) {

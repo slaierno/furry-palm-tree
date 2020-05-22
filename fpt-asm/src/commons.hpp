@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 #include <array>
-#include "../lc3-hw.hpp"
+#include "lc3-hw.hpp"
 
 /*********************************/
 /*            ENUMS              */

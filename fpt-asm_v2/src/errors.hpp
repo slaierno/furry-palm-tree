@@ -58,6 +58,7 @@ std::string error_string(const POP::Type pop) {
         break;
     case POP::STRINGZ:
         ss << "a valid string.";
+        break;
     case POP::COUNT:
         return "Unexpected POP::COUNT value.\n";
     }

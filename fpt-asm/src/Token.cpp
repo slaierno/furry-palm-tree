@@ -12,10 +12,10 @@ Token::Token(std::string token) : mToken(token) {
     if(token[0] == '#') {
         if(token[1] == 'x') {
             mType = TokenType::HexNumber;
-            mValue = std::stol(token.substr(2), 0, 16);
+            mValue = std::stoi(token.substr(2), 0, 16);
         } else {
             mType = TokenType::Number;
-            mValue = std::stol(token.substr(1), 0, 10);
+            mValue = std::stoi(token.substr(1), 0, 10);
         }
     }
     else if (token[0] == '.') {

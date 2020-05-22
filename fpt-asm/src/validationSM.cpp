@@ -296,7 +296,7 @@ void validateLineFSMImpl(TokenList& tokens) {
             throw asm_error::duplicate_label(front);
         label_map[label_str] = inst_address;
         tokens.pop_front(); 
-    } //intended fallthrough
+    } [[fallthrough]];
     default:
         startState<inc>(tokens);
     }
