@@ -85,7 +85,7 @@
 /* Type of Tokens */
 enum struct TokenType : unsigned {
     TOKEN_TYPES
-    Count /* 8 */,
+    Count /* 7 */,
 };
 
 /* List of possible instructions */
@@ -112,6 +112,14 @@ namespace REG {
         COUNT /* 8 */,
     };
 }
+
+/*These static asserts serve the purpose of triggering error
+  if the developer modifies any of the mentioned enums and 
+  remembering him to check if it was *really* the best idea */
+static_assert((int)TokenType::Count == 7, "Did you add an additional TokenType or is this a bad mistake?");
+static_assert(OP::COUNT == 34, "Did you add an additional OP::Type or is this a bad mistake?");
+static_assert(POP::COUNT == 5, "Did you add an additional POP::Type or is this a bad mistake?");
+static_assert(REG::COUNT == 8, "Did you add an additional REG::Type or is this a bad mistake?");
 
 #undef ENUM_MACRO
 
